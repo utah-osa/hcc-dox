@@ -1,0 +1,2772 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="generator" content="Hugo 0.74.3 with theme Tranquilpeak 0.4.8-BETA">
+<meta name="author" content="Utah OSA - Health Cost Compare ">
+<meta name="keywords" content="tech">
+<meta name="description" content="IntroductionIn this section we will:* identify which Delivery procedures were excluded and why* identify which different Delivery subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;## when loading &#39;dplyr&#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )library(hcctools2)Establish color palettes">
+
+
+<meta property="og:description" content="IntroductionIn this section we will:* identify which Delivery procedures were excluded and why* identify which different Delivery subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;## when loading &#39;dplyr&#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )library(hcctools2)Establish color palettes">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Birth">
+<meta name="twitter:title" content="Birth">
+<meta property="og:url" content="/2020/12/birth.en-us/">
+<meta property="twitter:url" content="/2020/12/birth.en-us/">
+<meta property="og:site_name" content="Health Care Compare Documentation">
+<meta property="og:description" content="IntroductionIn this section we will:* identify which Delivery procedures were excluded and why* identify which different Delivery subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;## when loading &#39;dplyr&#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )library(hcctools2)Establish color palettes">
+<meta name="twitter:description" content="IntroductionIn this section we will:* identify which Delivery procedures were excluded and why* identify which different Delivery subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;## when loading &#39;dplyr&#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )library(hcctools2)Establish color palettes">
+<meta property="og:locale" content="en-us">
+
+  
+    <meta property="article:published_time" content="2020-12-31T00:00:00">
+  
+  
+    <meta property="article:modified_time" content="2020-12-31T00:00:00">
+  
+  
+  
+    
+      <meta property="article:section" content="Major Surgery">
+    
+  
+  
+    
+      <meta property="article:tag" content="Caesarian Section">
+    
+      <meta property="article:tag" content="VBAC">
+    
+      <meta property="article:tag" content="Vaginal Birth">
+    
+  
+
+
+<meta name="twitter:card" content="summary">
+
+
+
+
+
+
+
+
+
+
+
+  <meta property="og:image" content="/img/osa-seal.jpg">
+  <meta property="twitter:image" content="/img/osa-seal.jpg">
+
+
+    <title>Birth</title>
+
+    <link rel="icon" href="/favicon.png">
+    
+
+    
+
+    <link rel="canonical" href="/2020/12/birth.en-us/">
+
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha256-eZrrJcwDc/3uDhsdt61sL2oOBY362qM3lon1gyExkL0=" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.css" integrity="sha256-vuXZ9LGmmwtjqFX1F+EKin1ThZMub58gKULUyf0qECk=" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" integrity="sha256-SEa4XYAHihTcEP1f5gARTB2K26Uk8PsndQYHQC1f4jU=" crossorigin="anonymous" />
+    
+    
+    <link rel="stylesheet" href="/css/style-twzjdbqhmnnacqs0pwwdzcdbt8yhv8giawvjqjmyfoqnvazl0dalmnhdkvp7.min.css" />
+    
+    
+
+    
+      
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="4">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Health Care Compare Documentation</a>
+  </div>
+  
+    
+      <a class="header-right-picture "
+         href="/#about">
+    
+    
+    
+      
+        <img class="header-picture" src="/img/osa-seal.jpg" alt="Author&#39;s picture" />
+      
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="4">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="/img/osa-seal.jpg" alt="Author&#39;s picture" />
+        </a>
+        <h4 class="sidebar-profile-name">Utah OSA - Health Cost Compare </h4>
+        
+          <h5 class="sidebar-profile-bio">Documentation for Office of the State Auditor&rsquo;s methodology in contstructing the Health Care Compare Tool</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+      
+      <span class="sidebar-button-desc">Home</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+      
+      <span class="sidebar-button-desc">Tags</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/#about">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/utah-osa/hcc-website">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+
+    </ul>
+  </div>
+</nav>
+
+      
+
+      <div id="main" data-behavior="4"
+        class="
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Birth
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2020-12-31T00:00:00Z">
+        
+  December 31, 2020
+
+      </time>
+    
+    
+  
+  
+    <span>in</span>
+    
+      <a class="category-link" href="/categories/major-surgery">Major Surgery</a>
+    
+  
+
+  </div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              
+<script src="/rmarkdown-libs/jquery/jquery.min.js"></script>
+<script src="/rmarkdown-libs/elevate-section-attrs/elevate-section-attrs.js"></script>
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In this section we will:
+* identify which Delivery procedures were excluded and why
+* identify which different Delivery subgroups were created and why</p>
+<p>If you have questions or concerns about this data please contact Alexander Nielson (<a href="mailto:alexnielson@utah.gov" class="email">alexnielson@utah.gov</a>)</p>
+</div>
+<div id="load-libraries" class="section level1">
+<h1>Load Libraries</h1>
+<p>Load Libraries</p>
+<pre class="r"><code>library(data.table)
+library(tidyverse)</code></pre>
+<pre><code>## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;
+## when loading &#39;dplyr&#39;</code></pre>
+<pre class="r"><code>library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )
+library(hcctools2)</code></pre>
+<p>Establish color palettes</p>
+<pre class="r"><code>cust_color_pal1 &lt;- c(
+        &quot;Anesthesia&quot; = &quot;#f3476f&quot;,
+        &quot;Facility&quot; = &quot;#e86a33&quot;,
+        &quot;Medicine Proc&quot; = &quot;#e0a426&quot;,
+        &quot;Pathology&quot; = &quot;#77bf45&quot;,
+        &quot;Radiology&quot; = &quot;#617ff7&quot;,
+        &quot;Surgery&quot; = &quot;#a974ee&quot;
+    )
+
+cust_color_pal2 &lt;- c(
+        &quot;TRUE&quot; = &quot;#617ff7&quot;,
+        &quot;FALSE&quot; = &quot;#e0a426&quot;
+    )
+
+cust_color_pal3 &lt;- c(
+        &quot;above avg&quot; = &quot;#f3476f&quot;,
+        &quot;avg&quot; = &quot;#77bf45&quot;,
+        &quot;below avg&quot; = &quot;#a974ee&quot;
+    )
+
+
+
+  fac_ref_regex &lt;- &quot;(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)&quot;</code></pre>
+</div>
+<div id="connect-to-gcp-database" class="section level1">
+<h1>Connect to GCP database</h1>
+<pre class="r"><code>bigrquery::bq_auth(path = &#39;D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json&#39;)
+
+# set my project ID and dataset name
+project_id &lt;- &#39;healthcare-compare-prod&#39;
+dataset_name &lt;- &#39;healthcare_compare&#39;
+
+con &lt;- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)</code></pre>
+</div>
+<div id="get-npi-table" class="section level1">
+<h1>Get NPI table</h1>
+<pre class="r"><code>query &lt;-  paste0(&quot;SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`&quot;)
+
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full &lt;- dbGetQuery(con, query) %&gt;%
+  data.table()</code></pre>
+</div>
+<div id="get-a-subset-of-the-npi-providers-based-upon-taxonomy-groups" class="section level1">
+<h1>get a subset of the NPI providers based upon taxonomy groups</h1>
+<pre class="r"><code>gs4_auth(email=&quot;alexnielson@utah.gov&quot;)</code></pre>
+<pre class="r"><code>surgery &lt;- read_sheet(&quot;https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0&quot;,
+                    sheet=&quot;major_surgery&quot;) %&gt;% as.data.table</code></pre>
+<pre><code>## Auto-refreshing stale OAuth token.</code></pre>
+<pre><code>## Reading from &quot;Doctor Types to Keep&quot;</code></pre>
+<pre><code>## Range &quot;&#39;major_surgery&#39;&quot;</code></pre>
+<pre class="r"><code>surgery &lt;-  surgery[is.na(Remove) ] %&gt;% .[[&quot;NUCC Classification&quot;]]</code></pre>
+<pre class="r"><code>  npi_prov_pair &lt;-  npi_full[osa_class %in% surgery] %&gt;%
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ]</code></pre>
+</div>
+<div id="load-data" class="section level1">
+<h1>Load Data</h1>
+<pre class="r"><code>bun_proc &lt;-  disk.frame(&quot;full_apcd.df&quot;)</code></pre>
+</div>
+<div id="birth" class="section level1">
+<h1>Birth</h1>
+<p>59610, 59612, 59614 - vbac delivery
+59510, 59514, 59515 - cesarean delivery
+59400, 59409, 59410 - Obstetrical care</p>
+<p>omit:</p>
+<p>d &amp; c after delivery</p>
+<pre class="r"><code>birth_vag &lt;- bun_proc[surg_bun_t_obstetrical ==T &amp; surg_bun_t_care==T]
+birth_csec &lt;- bun_proc[surg_bun_t_delivery==T &amp; surg_bun_t_cesarean==T]
+birth_vbac &lt;- bun_proc[surg_bun_t_delivery==T &amp; stri_detect_regex(surg_bun_descr,&quot;vbac&quot;)==T]</code></pre>
+<div id="vaginal-birth" class="section level2">
+<h2>vaginal birth</h2>
+<pre class="r"><code>birth_vag &lt;-  birth_vag[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %&gt;% map_chr(get_npi_standard_name)
+  )]</code></pre>
+<pre class="r"><code>birth_vag %&gt;% saveRDS(&quot;birth_vag.RDS&quot;)</code></pre>
+<pre class="r"><code>birth_vag &lt;- birth_vag[cnt&gt;5 &amp; faci_bun_sum_med &gt; 1000]</code></pre>
+<p>We will now examine the vaginal birth deliveries’s median price distribution and cost correlated tags.</p>
+<pre class="r"><code>birth_vag[cnt&gt;5 &amp; faci_bun_sum_med &gt; 1000]%&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+<pre class="r"><code>birth_vag[cnt&gt;5 &amp; faci_bun_sum_med &gt; 1000]%&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 307 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 duration_max              0.318
+##  2 surg_bun_t_abd            0.268
+##  3 surg_bun_t_abdom          0.268
+##  4 surg_bun_t_abdomen        0.268
+##  5 surg_bun_t_explora        0.268
+##  6 anes_bun_t_abdom          0.246
+##  7 faci_bun_t_care           0.242
+##  8 faci_bun_t_initial        0.239
+##  9 anes_bun_t_lower          0.237
+## 10 faci_bun_t_hospital       0.236
+## # ... with 297 more rows</code></pre>
+<pre class="r"><code>birth_vag %&gt;% get_tag_density_information(&quot;surg_bun_t_abdomen&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_abdomen&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 4280</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-14-2.png" width="672" /></p>
+<p>There are only two with a exploratory abdomen surgery code, so we will omit them from the standard.</p>
+<pre class="r"><code>birth_vag &lt;- birth_vag[surg_bun_t_abdomen==F]</code></pre>
+<p>We will now examine the vaginal birth deliveries’s median price distribution and cost correlated tags.</p>
+<pre class="r"><code>birth_vag%&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<pre class="r"><code>birth_vag%&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 300 x 2
+##    name                  correlation
+##    &lt;chr&gt;                       &lt;dbl&gt;
+##  1 duration_max                0.304
+##  2 faci_bun_t_care             0.234
+##  3 faci_bun_t_hospital         0.229
+##  4 faci_bun_t_initial          0.225
+##  5 faci_bun_t_dept             0.218
+##  6 faci_bun_t_emergency        0.218
+##  7 faci_bun_t_visit            0.209
+##  8 faci_bun_t_subsequent       0.195
+##  9 anes_bun_t_anes             0.180
+## 10 anes_bun_t_anesth           0.180
+## # ... with 290 more rows</code></pre>
+<p>It now looks like the main differece has to do with the facility type. ie:
+Initial hospital care
+Subsequent observation care
+Subsequent hospital care
+Emergency dept visit</p>
+<pre class="r"><code>birth_vag %&gt;% get_tag_density_information(&quot;faci_bun_t_initial&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ faci_bun_t_initial&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 738</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-17-2.png" width="672" /></p>
+<pre class="r"><code>birth_vag %&gt;% get_tag_density_information(&quot;faci_bun_t_emergency&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ faci_bun_t_emergency&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 467</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-18-2.png" width="672" /></p>
+<pre class="r"><code>birth_vag_init_hosp_care &lt;- birth_vag[faci_bun_t_initial==T &amp; faci_bun_t_hospital==T &amp; faci_bun_t_care==T]</code></pre>
+<pre class="r"><code>birth_vag &lt;- birth_vag[faci_bun_t_initial==F &amp; faci_bun_t_hospital==F &amp; faci_bun_t_care==F]</code></pre>
+<p>We will now examine the vaginal birth deliveries’s median price distribution and cost correlated tags.</p>
+<pre class="r"><code>birth_vag%&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
+<pre class="r"><code>birth_vag%&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 276 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 anes_bun_t_anes            0.196
+##  2 anes_bun_t_anesth          0.196
+##  3 faci_bun_t_dept            0.192
+##  4 faci_bun_t_emergency       0.192
+##  5 duration_max               0.192
+##  6 anes_bun_t_vag             0.191
+##  7 anes_bun_t_deliver         0.190
+##  8 anes_bun_t_liver           0.190
+##  9 anes_bun_t_analg           0.188
+## 10 faci_bun_t_visit           0.178
+## # ... with 266 more rows</code></pre>
+<pre class="r"><code>birth_vag %&gt;% get_tag_density_information(&quot;anes_bun_t_anes&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_anes&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 381</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-22-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-22-2.png" width="672" /></p>
+<pre class="r"><code>birth_vag &lt;-  birth_vag[anes_bun_t_anes==T]
+birth_bag_no_anes &lt;- birth_vag[anes_bun_t_anes==F]</code></pre>
+<p>We will now examine the vaginal birth deliveries’s median price distribution and cost correlated tags.</p>
+<pre class="r"><code>birth_vag%&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-24-1.png" width="672" /></p>
+<pre class="r"><code>birth_vag%&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 259 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 faci_bun_t_dept               0.206
+##  2 faci_bun_t_emergency          0.206
+##  3 faci_bun_t_visit              0.186
+##  4 duration_max                  0.178
+##  5 surg_bun_t_hyst               0.144
+##  6 surg_bun_t_hysterectomy       0.144
+##  7 path_bun_t_patho              0.127
+##  8 path_bun_t_pathologist        0.127
+##  9 path_bun_t_tissue             0.127
+## 10 surg_bun_t_total              0.117
+## # ... with 249 more rows</code></pre>
+<pre class="r"><code>birth_vag %&gt;% get_tag_density_information(&quot;faci_bun_t_emergency&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ faci_bun_t_emergency&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 331</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-25-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-25-2.png" width="672" /></p>
+<pre class="r"><code>birth_vag_w_anes_w_emerg_dept &lt;- birth_vag[faci_bun_t_emergency==T &amp; faci_bun_t_dept==T]
+birth_vag &lt;- birth_vag[faci_bun_t_emergency==F &amp; faci_bun_t_dept==F]</code></pre>
+<p>We will now examine the vaginal birth deliveries’s median price distribution and cost correlated tags.</p>
+<pre class="r"><code>birth_vag%&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-27-1.png" width="672" /></p>
+<pre class="r"><code>birth_vag%&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 241 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 duration_max                 0.179 
+##  2 surg_bun_t_hyst              0.150 
+##  3 surg_bun_t_hysterectomy      0.150 
+##  4 surg_bun_t_total             0.121 
+##  5 path_bun_t_patho             0.117 
+##  6 path_bun_t_pathologist       0.117 
+##  7 path_bun_t_tissue            0.117 
+##  8 anes_bun_t_lower             0.115 
+##  9 anes_bun_t_abdom             0.108 
+## 10 anes_bun_t_surg              0.0929
+## # ... with 231 more rows</code></pre>
+<pre class="r"><code>birth_vag %&gt;% get_tag_density_information(&quot;surg_bun_t_hysterectomy&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_hysterectomy&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1590</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-28-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-28-2.png" width="672" /></p>
+<pre class="r"><code>birth_vag &lt;- birth_vag[surg_bun_t_hysterectomy==F]</code></pre>
+<pre class="r"><code>birth_vag %&gt;% get_tag_density_information(&quot;path_bun_t_tissue&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ path_bun_t_tissue&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 641</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-30-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-30-2.png" width="672" /></p>
+<p>We will now examine the vaginal birth deliveries’s median price distribution and cost correlated tags.</p>
+<pre class="r"><code>birth_vag%&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-31-1.png" width="672" /></p>
+<pre class="r"><code>birth_vag%&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 237 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 duration_max                0.178 
+##  2 path_bun_t_patho            0.110 
+##  3 path_bun_t_pathologist      0.110 
+##  4 path_bun_t_tissue           0.110 
+##  5 path_bun_t_complete         0.0754
+##  6 surg_bun_t_uterus           0.0741
+##  7 path_bun_t_screen           0.0732
+##  8 anes_bun_t_tubal            0.0711
+##  9 surg_bun_t_fallopian        0.0709
+## 10 surg_bun_t_tube             0.0709
+## # ... with 227 more rows</code></pre>
+<pre class="r"><code>birth_vag %&gt;% get_tag_density_information(&quot;path_bun_t_patho&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ path_bun_t_patho&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 641</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-32-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-32-2.png" width="672" /></p>
+<pre class="r"><code>birth_vag_with_patho &lt;- birth_vag[path_bun_t_patho==T]
+birth_vag &lt;- birth_vag[path_bun_t_patho==F]</code></pre>
+<p>We will now examine the vaginal birth deliveries’s median price distribution and cost correlated tags.</p>
+<pre class="r"><code>birth_vag %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-34-1.png" width="672" /></p>
+<pre class="r"><code>birth_vag %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 211 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 duration_max                0.168 
+##  2 surg_bun_t_uterus           0.079 
+##  3 path_bun_t_complete         0.0723
+##  4 path_bun_t_screen           0.0713
+##  5 surg_bun_t_hematoma         0.0703
+##  6 radi_bun_t_ct               0.0612
+##  7 medi_bun_t_observ           0.061 
+##  8 anes_bun_t_abdom            0.0597
+##  9 anes_bun_t_lower            0.0597
+## 10 radi_bun_t_angiography      0.0594
+## # ... with 201 more rows</code></pre>
+<pre class="r"><code>birth_vag[surg_bun_t_uterus==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>birth_vag %&gt;% get_tag_density_information(&quot;path_bun_t_complete&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ path_bun_t_complete&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 509</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-35-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-35-2.png" width="672" /></p>
+<pre class="r"><code>birth_vag %&gt;% get_tag_density_information(&quot;radi_bun_t_ct&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.
+## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ radi_bun_t_ct&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 2310</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-35-3.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-35-4.png" width="672" /></p>
+<pre class="r"><code>birth_vag &lt;- birth_vag[surg_bun_t_uterus==F &amp; path_bun_t_complete==F  &amp; radi_bun_t_ct==F]</code></pre>
+<pre class="r"><code>birth_vag %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-37-1.png" width="672" /></p>
+<pre class="r"><code>birth_vag %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 186 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 duration_max            0.159 
+##  2 path_bun_t_anti         0.0597
+##  3 path_bun_t_antibod      0.0597
+##  4 path_bun_t_screen       0.0558
+##  5 radi_bun_t_pelvi        0.0548
+##  6 surg_bun_t_dev          0.0522
+##  7 surg_bun_t_device       0.0522
+##  8 medi_bun_t_observ       0.0514
+##  9 surg_bun_t_insert       0.0476
+## 10 path_bun_t_blood        0.0468
+## # ... with 176 more rows</code></pre>
+<pre class="r"><code>birth_vag[cnt &gt; 10 &amp; faci_bun_sum_med &gt; 2000] %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-38-1.png" width="672" /></p>
+<pre class="r"><code>birth_vag[cnt &gt; 10 &amp; faci_bun_sum_med &gt; 2000] %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 171 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 medi_bun_t_clinic       0.123 
+##  2 medi_bun_t_outpt        0.123 
+##  3 duration_max            0.122 
+##  4 medi_bun_t_visit        0.116 
+##  5 radi_bun_t_pelvi        0.086 
+##  6 path_bun_t_anti         0.0721
+##  7 path_bun_t_antibod      0.0721
+##  8 medi_bun_t_inject       0.0641
+##  9 medi_bun_t_sulfate      0.0629
+## 10 surg_bun_t_remov        0.0618
+## # ... with 161 more rows</code></pre>
+<pre class="r"><code>birth_vag[cnt &gt; 10 &amp; faci_bun_sum_med &gt; 2000] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 3146</code></pre>
+<pre class="r"><code>birth_vag &lt;- birth_vag[cnt &gt; 10 &amp; faci_bun_sum_med &gt; 2000]</code></pre>
+<pre class="r"><code>birth_vag %&gt;% get_tag_density_information(&quot;medi_bun_t_clinic&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ medi_bun_t_clinic&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 513</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-40-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-40-2.png" width="672" /></p>
+<pre class="r"><code>birth_vag &lt;- birth_vag[medi_bun_t_clinic==F]</code></pre>
+<pre class="r"><code>birth_vag %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-42-1.png" width="672" /></p>
+<pre class="r"><code>birth_vag %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 167 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 duration_max            0.119 
+##  2 radi_bun_t_pelvi        0.0882
+##  3 path_bun_t_fetal        0.0782
+##  4 path_bun_t_anti         0.0756
+##  5 path_bun_t_antibod      0.0756
+##  6 path_bun_t_typing       0.073 
+##  7 path_bun_t_blood        0.0631
+##  8 surg_bun_t_remov        0.0623
+##  9 surg_bun_t_removal      0.0554
+## 10 anes_bun_t_vag          0.0543
+## # ... with 157 more rows</code></pre>
+<pre class="r"><code>birth_vag %&gt;% get_tag_density_information(&quot;radi_bun_t_pelvi&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ radi_bun_t_pelvi&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 3920</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-43-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-43-2.png" width="672" /></p>
+<pre class="r"><code>birth_vag &lt;- birth_vag[radi_bun_t_pelvi==F]</code></pre>
+<pre class="r"><code>birth_vag %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-45-1.png" width="672" /></p>
+<pre class="r"><code>birth_vag %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 166 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 duration_max            0.117 
+##  2 path_bun_t_fetal        0.079 
+##  3 path_bun_t_anti         0.0765
+##  4 path_bun_t_antibod      0.0765
+##  5 path_bun_t_typing       0.0739
+##  6 path_bun_t_blood        0.0639
+##  7 surg_bun_t_remov        0.0631
+##  8 surg_bun_t_removal      0.0561
+##  9 anes_bun_t_vag          0.055 
+## 10 surg_bun_t_scar         0.0543
+## # ... with 156 more rows</code></pre>
+<pre class="r"><code>birth_vag[path_bun_t_fetal==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>birth_vag &lt;- birth_vag[path_bun_t_fetal==F]</code></pre>
+<pre class="r"><code>birth_vag %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-48-1.png" width="672" /></p>
+<pre class="r"><code>birth_vag %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 165 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 duration_max              0.114 
+##  2 surg_bun_t_remov          0.0634
+##  3 surg_bun_t_removal        0.0564
+##  4 anes_bun_t_vag            0.0553
+##  5 surg_bun_t_scar           0.0545
+##  6 surg_bun_t_treat          0.0545
+##  7 anes_bun_t_analg          0.054 
+##  8 surg_bun_t_fallopian      0.0533
+##  9 surg_bun_t_tube           0.0533
+## 10 anes_bun_t_tubal          0.0533
+## # ... with 155 more rows</code></pre>
+</div>
+<div id="btb-for-vaginal-births" class="section level2">
+<h2>btb for vaginal births</h2>
+<pre class="r"><code>birth_vag_btbv4 &lt;- birth_vag %&gt;% btbv4()</code></pre>
+<pre class="r"><code>birth_vag_bq &lt;- birth_vag_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs=&quot;Obstetrics &amp; Gynecology&quot;#,
+                                  # specialization_reqs = &quot;Obstetrics|||Maternal &amp; Fetal Medicine&quot;
+                                  ),
+                                                .f=calculate_primary_doctor) %&gt;% as.character()
+                     ] %&gt;% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c(&quot;BOTH_DOC_FAIL_CRIT&quot;, &quot;TWO_FIT_ALL_SPECS&quot;))] %&gt;% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %&gt;% 
+  .[,`:=`(procedure_type=5, procedure_modifier=&quot;Vaginal Delivery&quot;)]</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;TIFFANY KRISTEN WEBER&quot;    &quot;HEATHER DONAHOE CAMPBELL&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;BRYAN SETH PALMER&quot; &quot;KIRK ANDREW LAMMI&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID WARE BRANCH&quot;  &quot;STEVEN M THACKERAY&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;STEVEN GREG NANCE&quot;    &quot;DONNA  DIZON-TOWNSON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;LUNT  KVARFORDT  (SAINT GEORGE)&quot; &quot;CHAD C LUNT&quot;                    
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID WARE BRANCH&quot; &quot;ANN  BRUNO&quot;       
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;HANNELE MARIE LAINE&quot; &quot;TROY FLINT PORTER&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;LUNT  KVARFORDT  (SAINT GEORGE)&quot; &quot;TRACY D KVARFORDT&quot;              
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;KAREN BOHEEN  (LAYTON)&quot; &quot;KAREN  BOHEEN&quot;         
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEFF DAVID NANCE&quot;  &quot;STEVEN GREG NANCE&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;KAREN BOHEEN  (LAYTON)&quot; &quot;KAREN  BOHEEN&quot;         
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;TROY FLINT PORTER&quot; &quot;CARA C HEUSER&quot;    
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEFFOREY R. THORPE&quot;  &quot;PETER GILSON DREWES&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID E LUDLOW&quot;     &quot;JASON KEITH MORRIS&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ROBERT  MERRILL&quot;      &quot;JEFFREY DENNIS QUINN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID WARE BRANCH&quot;   &quot;LISA MARIE GRAVELLE&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEFFREY CHARLES BROBERG&quot; &quot;BRIAN L WOLSEY&quot;         
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MARIA A ONEIDA&quot;   &quot;MICHAEL S ESPLIN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID WARE BRANCH&quot; &quot;JANE C BOWMAN&quot;    
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MARCELA  SMID&quot;  &quot;AMY E SULLIVAN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID KEITH TUROK&quot; &quot;AMY E SULLIVAN&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEFF DAVID NANCE&quot;     &quot;DONNA  DIZON-TOWNSON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SCOTT R. JACOB&quot;      &quot;PETER GILSON DREWES&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CLAYTON SCOTT SYNDERGAARD&quot; &quot;BEN DOUGLAS WILLIAMS&quot;     
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CRAIG L HURST MD  (LAYTON)&quot; &quot;CRAIG L HURST&quot;             
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ERIN A.S. CLARK&quot; &quot;ANN  BRUNO&quot;     
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;IBRAHIM A HAMMAD&quot; &quot;AMY E SULLIVAN&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID  BIERER&quot;              &quot;ROSEMARY TIRINNANZI LESSER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JAMES P LAMOREAUX&quot; &quot;SEAN  HASKETT&quot;    
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JULIE GLENN GROVER&quot;   &quot;DONNA  DIZON-TOWNSON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;STEVEN GREG NANCE&quot; &quot;HELEN  FELTOVICH&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CHRISTIAN D FROERER&quot; &quot;JEFFREY H BARTON&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SHANNON L TILLY&quot; &quot;NANCY C ROSE&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JASON KEITH MORRIS&quot;      &quot;JEANETTE RUTH CARPENTER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;STEVEN GREG NANCE&quot; &quot;GLENN K SCHEMMER&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;COURTNEY CLAIRE MACLEAN&quot; &quot;ROBERT M. SILVER&quot;       
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SHANNON L TILLY&quot;     &quot;HANNELE MARIE LAINE&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALICIA TABISH JONES&quot; &quot;DOUGLAS S RICHARDS&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ASHLEY CRAMER BYNO&quot;  &quot;HANNELE MARIE LAINE&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;TENNILLE  CLOWARD&quot;    &quot;DONNA  DIZON-TOWNSON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;TRACY W WINWARD&quot; &quot;BRADY  BENHAM&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID A KIRKMAN&quot;      &quot;ANNE SADLER BLACKETT&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JENNA  MADSEN&quot;            &quot;KRISTIN ELIZABETH WEXLER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID B YOUNG&quot;           &quot;JEANETTE RUTH CARPENTER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;HOWARD T. SHARP&quot;  &quot;LAUREN H THEILEN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;BRANDON LEE REYNOLDS&quot; &quot;ROBERT M. SILVER&quot;    
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JHENETTE RENEE LAUDER&quot;           &quot;MICHELLE LYNNE PRECOURT DEBBINK&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;EVAN  JONES&quot;   &quot;SEAN  HASKETT&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MARGIT SZABO LISTER&quot;    &quot;MARGRET ALLISON MENCER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID WARE BRANCH&quot; &quot;MICHAEL L DRAPER&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEFFREY CHARLES BROBERG&quot; &quot;JULIE  GAINER&quot;          
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MELISSA ANN BROWN&quot; &quot;TROY FLINT PORTER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SHANNON L TILLY&quot;    &quot;DOUGLAS S RICHARDS&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ANDREA JULIET HEBERT&quot; &quot;TROY FLINT PORTER&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CHRISTIAN D FROERER&quot; &quot;CARA C HEUSER&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JULIE GLENN GROVER&quot; &quot;GLENN K SCHEMMER&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEFF DAVID NANCE&quot; &quot;HELEN  FELTOVICH&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID WARE BRANCH&quot; &quot;TROY FLINT PORTER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALEXANDRA GROSVENOR ELLER&quot; &quot;DOUGLAS S RICHARDS&quot;       
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEFFREY CHARLES BROBERG&quot; &quot;GLENN K SCHEMMER&quot;       
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MICHAEL S ESPLIN&quot; &quot;NATALIE K LOEWEN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;EVAN  JONES&quot;      &quot;RYAN C. OLLERTON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;REBECCA LOUISE PONDER&quot; &quot;DOUGLAS S RICHARDS&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SEAN  HASKETT&quot;     &quot;TENNILLE  CLOWARD&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALEXANDRA GROSVENOR ELLER&quot; &quot;CHRISTIAN D FROERER&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CRAIG L HURST MD  (LAYTON)&quot; &quot;CRAIG L HURST&quot;             
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALEXANDRA GROSVENOR ELLER&quot; &quot;MICHAEL S ESPLIN&quot;         
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;STEVEN C MEEK&quot;      &quot;CAMILLE  STEVENSON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SCOTT S. REES&quot;           &quot;JEFFREY CHARLES BROBERG&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;AMELIA  PARRETT&quot;   &quot;TROY FLINT PORTER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID WARE BRANCH&quot; &quot;AMELIA  PARRETT&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALTON D BURGETT&quot; &quot;CARA C HEUSER&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID WARE BRANCH&quot; &quot;MELISSA ANN BROWN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CYNTHIA  CANNON&quot; &quot;NANCY C ROSE&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ROBERT O AAGARD&quot;   &quot;TENNILLE  CLOWARD&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SCOTT R. JACOB&quot;       &quot;DONNA  DIZON-TOWNSON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;KRISTEN HAAS BLACK&quot; &quot;MICHAEL S ESPLIN&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;COBY THOMAS BROWN&quot; &quot;TRACY W WINWARD&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;REED J SKINNER&quot;   &quot;HELEN  FELTOVICH&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;EVAN  JONES&quot;          &quot;DONNA  DIZON-TOWNSON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SEAN  HASKETT&quot;    &quot;RYAN C. OLLERTON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALEXANDRA GROSVENOR ELLER&quot; &quot;LISA MARIE GRAVELLE&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SCOTT R. JACOB&quot;     &quot;JEFFOREY R. THORPE&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEFFREY CHARLES BROBERG&quot; &quot;HELEN  FELTOVICH&quot;       
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SHANNON L TILLY&quot; &quot;JULIE  GAINER&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;LISA MARIE GRAVELLE&quot; &quot;CARA C HEUSER&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DANIEL FRED KAELBERER&quot; &quot;TROY FLINT PORTER&quot;    
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SUSAN MARIE HOWEY&quot; &quot;KATHRYN E WALKER&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JULIE  GAINER&quot;    &quot;NATALIE K LOEWEN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALEXANDRA GROSVENOR ELLER&quot; &quot;ROBERT  MERRILL&quot;          
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID  BIERER&quot;   &quot;ROBERT L ANDRES&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;AMELIA  PARRETT&quot;     &quot;LISA MARIE GRAVELLE&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SCOTT F EPSTEIN&quot;               &quot;DENISE JEAN BOUDREAUX-NIPPERT&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MARGIT SZABO LISTER&quot; &quot;ROBERT L ANDRES&quot;    
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ROBERT O AAGARD&quot; &quot;SEAN  HASKETT&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;IBRAHIM A HAMMAD&quot; &quot;CARA C HEUSER&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SPENCER EDMOND PIERSON&quot; &quot;MICHAEL S ESPLIN&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SCOTT R. JACOB&quot; &quot;JULIE  GAINER&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JENNA  MADSEN&quot; &quot;EMMA J MILLER&quot;</code></pre>
+<pre class="r"><code>birth_vag_bq &lt;- birth_vag_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac  ,
+most_important_fac_npi, 
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]</code></pre>
+<pre class="r"><code>bq_table_upload(x=procedure_table, values= birth_vag_bq, create_disposition=&#39;CREATE_IF_NEEDED&#39;, write_disposition=&#39;WRITE_APPEND&#39;)</code></pre>
+</div>
+<div id="birth_csec" class="section level2">
+<h2>birth_csec</h2>
+<pre class="r"><code>birth_csec %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-53-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 287 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 duration_max              0.587
+##  2 anes_bun_t_anes           0.326
+##  3 anes_bun_t_anesth         0.325
+##  4 anes_bun_t_deliver        0.324
+##  5 anes_bun_t_liver          0.324
+##  6 anes_bun_t_cs             0.291
+##  7 faci_bun_t_initial        0.235
+##  8 anes_bun_t_vag            0.188
+##  9 anes_bun_t_analg          0.183
+## 10 anes_bun_t_add - on       0.174
+## # ... with 277 more rows</code></pre>
+<pre class="r"><code>birth_csec &lt;-  birth_csec[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %&gt;% map_chr(get_npi_standard_name)
+  )]</code></pre>
+<pre class="r"><code>birth_csec %&gt;% saveRDS(&quot;birth_csec.RDS&quot;)</code></pre>
+<pre class="r"><code>birth_csec &lt;- readRDS(&quot;birth_csec.RDS&quot;)</code></pre>
+<pre class="r"><code>birth_csec[cnt&gt;5 &amp; faci_bun_sum_med &gt; 3000 &amp; tp_med &lt; 60000] %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-57-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec[cnt&gt;5 &amp; faci_bun_sum_med &gt; 3000 &amp; tp_med &lt; 60000] %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 272 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 duration_max               0.299
+##  2 faci_bun_t_initial         0.27 
+##  3 faci_bun_t_visit           0.186
+##  4 anes_bun_t_vag             0.176
+##  5 anes_bun_t_analg           0.174
+##  6 faci_bun_t_dept            0.161
+##  7 faci_bun_t_emergency       0.161
+##  8 anes_bun_t_add - on        0.158
+##  9 radi_bun_t_chest           0.147
+## 10 faci_bun_t_discharge       0.132
+## # ... with 262 more rows</code></pre>
+<pre class="r"><code>birth_csec &lt;- birth_csec[cnt&gt;5 &amp; faci_bun_sum_med &gt; 3000 &amp; tp_med &lt; 60000]</code></pre>
+<pre class="r"><code>birth_csec %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-59-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 272 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 duration_max               0.299
+##  2 faci_bun_t_initial         0.27 
+##  3 faci_bun_t_visit           0.186
+##  4 anes_bun_t_vag             0.176
+##  5 anes_bun_t_analg           0.174
+##  6 faci_bun_t_dept            0.161
+##  7 faci_bun_t_emergency       0.161
+##  8 anes_bun_t_add - on        0.158
+##  9 radi_bun_t_chest           0.147
+## 10 faci_bun_t_discharge       0.132
+## # ... with 262 more rows</code></pre>
+<pre class="r"><code>birth_csec %&gt;% get_tag_density_information(&quot;faci_bun_t_initial&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ faci_bun_t_initial&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1440</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-60-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-60-2.png" width="672" /></p>
+<p>Statiscally significant different groups, but too small to represent own group.</p>
+<pre class="r"><code>birth_csec &lt;- birth_csec[faci_bun_t_initial==F]</code></pre>
+<p>Now, we wil recheck the median price density and highly correlated tags.</p>
+<pre class="r"><code>birth_csec %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-62-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 231 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 duration_max              0.197 
+##  2 anes_bun_t_vag            0.180 
+##  3 anes_bun_t_analg          0.178 
+##  4 anes_bun_t_add - on       0.161 
+##  5 faci_bun_t_visit          0.147 
+##  6 faci_bun_t_dept           0.128 
+##  7 faci_bun_t_emergency      0.128 
+##  8 path_bun_t_complete       0.0935
+##  9 faci_bun_t_discharge      0.0921
+## 10 surg_bun_t_remove         0.0916
+## # ... with 221 more rows</code></pre>
+<pre class="r"><code>birth_csec %&gt;% get_tag_density_information(&quot;faci_bun_t_emergency&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ faci_bun_t_emergency&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 804</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-63-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-63-2.png" width="672" /></p>
+<pre class="r"><code>birth_csec &lt;- birth_csec[faci_bun_t_emergency == F  &amp; faci_bun_t_discharge == F]</code></pre>
+<p>ow, we wil recheck the median price density and highly correlated tags.</p>
+<pre class="r"><code>birth_csec %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-65-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 224 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 duration_max                0.192 
+##  2 anes_bun_t_vag              0.177 
+##  3 anes_bun_t_analg            0.175 
+##  4 anes_bun_t_add - on         0.159 
+##  5 surg_bun_t_remove           0.0961
+##  6 faci_bun_t_hospital         0.0908
+##  7 faci_bun_t_subsequent       0.0881
+##  8 faci_bun_t_care             0.0866
+##  9 path_bun_t_complete         0.0847
+## 10 faci_bun_t_observation      0.0844
+## # ... with 214 more rows</code></pre>
+<pre class="r"><code>birth_csec %&gt;% get_tag_density_information(&quot;anes_bun_t_vag&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_vag&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 589</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-66-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-66-2.png" width="672" /></p>
+<pre class="r"><code>birth_csec_w_anes &lt;- birth_csec[anes_bun_t_vag==T]
+birth_csec_n_anes &lt;- birth_csec[anes_bun_t_vag==F]</code></pre>
+</div>
+<div id="birth_csec_n_anes" class="section level2">
+<h2>birth_csec_n_anes</h2>
+<pre class="r"><code>birth_csec_n_anes %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-68-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec_n_anes %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 204 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 duration_max                 0.188 
+##  2 medi_bun_t_puncture          0.128 
+##  3 medi_bun_t_routine           0.128 
+##  4 medi_bun_t_venipuncture      0.128 
+##  5 faci_bun_t_observation       0.112 
+##  6 path_bun_t_antibod           0.102 
+##  7 surg_bun_t_bladder           0.1   
+##  8 path_bun_t_screen            0.0978
+##  9 path_bun_t_complete          0.096 
+## 10 path_bun_t_anti              0.0958
+## # ... with 194 more rows</code></pre>
+</div>
+<div id="birth_csec_w_anes" class="section level2">
+<h2>birth_csec_w_anes</h2>
+<p>we will now look at the density distribution for csection births with anesthesia</p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-69-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 152 x 2
+##    name                  correlation
+##    &lt;chr&gt;                       &lt;dbl&gt;
+##  1 surg_bun_t_remove           0.248
+##  2 surg_bun_t_cyst             0.161
+##  3 surg_bun_t_ovarian          0.161
+##  4 surg_bun_t_remov            0.161
+##  5 surg_bun_t_removal          0.161
+##  6 anes_bun_t_analg            0.157
+##  7 duration_max                0.127
+##  8 radi_bun_t_artery           0.116
+##  9 faci_bun_t_hospital         0.105
+## 10 faci_bun_t_subsequent       0.105
+## # ... with 142 more rows</code></pre>
+<pre class="r"><code>birth_csec_w_anes[surg_bun_t_remove==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<p>only one in with that tag</p>
+<pre class="r"><code>birth_csec_w_anes &lt;- birth_csec_w_anes[surg_bun_t_remove==F]</code></pre>
+<pre class="r"><code>birth_csec_w_anes[surg_bun_t_ovarian==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<p>only one in with that tag</p>
+<pre class="r"><code>birth_csec_w_anes &lt;- birth_csec_w_anes[surg_bun_t_ovarian==F]</code></pre>
+<p>we will now look at the density distribution for csection births with anesthesia</p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-74-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 144 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 radi_bun_t_artery           0.120 
+##  2 faci_bun_t_hospital         0.117 
+##  3 faci_bun_t_subsequent       0.117 
+##  4 faci_bun_t_care             0.114 
+##  5 radi_bun_t_echo             0.0951
+##  6 path_bun_t_patho            0.0927
+##  7 path_bun_t_pathologist      0.0927
+##  8 path_bun_t_tissue           0.0927
+##  9 path_bun_t_virus            0.0879
+## 10 path_bun_t_complete         0.0877
+## # ... with 134 more rows</code></pre>
+<pre class="r"><code>birth_csec %&gt;% get_tag_density_information(&quot;radi_bun_t_artery&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ radi_bun_t_artery&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1320</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-75-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-75-2.png" width="672" /></p>
+<pre class="r"><code>birth_csec_w_anes &lt;- birth_csec_w_anes[radi_bun_t_artery==F]</code></pre>
+<p>we will now look at the density distribution for csection births with anesthesia</p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-77-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 143 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 faci_bun_t_hospital         0.125 
+##  2 faci_bun_t_subsequent       0.125 
+##  3 faci_bun_t_care             0.123 
+##  4 path_bun_t_patho            0.0939
+##  5 path_bun_t_pathologist      0.0939
+##  6 path_bun_t_tissue           0.0939
+##  7 path_bun_t_virus            0.0902
+##  8 duration_max                0.0897
+##  9 path_bun_t_complete         0.0817
+## 10 surg_bun_t_abdom            0.0779
+## # ... with 133 more rows</code></pre>
+<pre class="r"><code>birth_csec_w_anes %&gt;% get_tag_density_information(&quot;faci_bun_t_hospital&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ faci_bun_t_hospital&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 827</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-78-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-78-2.png" width="672" /></p>
+<pre class="r"><code>birth_csec_w_anes_w_sub_hosp_care &lt;- birth_csec_w_anes[faci_bun_t_care==T &amp; faci_bun_t_subsequent ==T]
+birth_csec_w_anes &lt;- birth_csec_w_anes[faci_bun_t_care==F &amp; faci_bun_t_subsequent ==F]</code></pre>
+<p>we will now look at the density distribution for csection births with anesthesia</p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-80-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 109 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 duration_max              0.123
+##  2 path_bun_t_complete       0.121
+##  3 path_bun_t_colon          0.117
+##  4 path_bun_t_count          0.117
+##  5 path_bun_t_virus          0.117
+##  6 surg_bun_t_abd            0.100
+##  7 surg_bun_t_abdom          0.100
+##  8 surg_bun_t_abdomen        0.100
+##  9 surg_bun_t_open           0.100
+## 10 surg_bun_t_opening        0.100
+## # ... with 99 more rows</code></pre>
+<pre class="r"><code>birth_csec_w_anes %&gt;% get_tag_density_information(&quot;path_bun_t_complete&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ path_bun_t_complete&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1580</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-81-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-81-2.png" width="672" /></p>
+<pre class="r"><code>birth_csec_w_anes[path_bun_t_colon==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>birth_csec_w_anes[surg_bun_t_abdom==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<p>There is weak evidence to split, but since only 19 of them are listed a complete pathology panel, I will omit the 19. This also gets rid of a few outliers.</p>
+<pre class="r"><code>birth_csec_w_anes &lt;- birth_csec_w_anes[path_bun_t_complete==F &amp; path_bun_t_colon==F &amp; surg_bun_t_abdom==F]</code></pre>
+<p>we will now look at the density distribution for csection births with anesthesia</p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-83-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 86 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 duration_max                0.108 
+##  2 surg_bun_t_b9               0.104 
+##  3 surg_bun_t_exc              0.104 
+##  4 surg_bun_t_block            0.0932
+##  5 surg_bun_t_injection        0.0932
+##  6 path_bun_t_amniotic         0.0808
+##  7 path_bun_t_protein          0.0808
+##  8 path_bun_t_patho            0.0734
+##  9 path_bun_t_pathologist      0.0734
+## 10 path_bun_t_tissue           0.0734
+## # ... with 76 more rows</code></pre>
+<pre class="r"><code>birth_csec_w_anes %&gt;% get_tag_density_information(&quot;surg_bun_t_exc&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_exc&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 3130</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-84-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-84-2.png" width="672" />
+Small subset and not a standard procedure based on frequency.</p>
+<pre class="r"><code>birth_csec_w_anes &lt;- birth_csec_w_anes[surg_bun_t_exc==F]</code></pre>
+<p>we will now look at the density distribution for csection births with anesthesia</p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-86-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 84 x 2
+##    name                  correlation
+##    &lt;chr&gt;                       &lt;dbl&gt;
+##  1 duration_max               0.106 
+##  2 surg_bun_t_block           0.0951
+##  3 surg_bun_t_injection       0.0951
+##  4 path_bun_t_amniotic        0.082 
+##  5 path_bun_t_protein         0.082 
+##  6 surg_bun_t_ant             0.065 
+##  7 surg_bun_t_antepartum      0.065 
+##  8 surg_bun_t_art             0.065 
+##  9 surg_bun_t_part            0.065 
+## 10 surg_bun_t_tum             0.065 
+## # ... with 74 more rows</code></pre>
+<pre class="r"><code>birth_csec_w_anes[surg_bun_t_injection==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 11</code></pre>
+<pre class="r"><code>birth_csec_w_anes[path_bun_t_amniotic==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>birth_csec_w_anes[surg_bun_t_antepartum==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 40</code></pre>
+<pre class="r"><code>birth_csec_w_anes[surg_bun_t_perineum==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>birth_csec_w_anes &lt;- birth_csec_w_anes[surg_bun_t_injection==F &amp; path_bun_t_amniotic==F &amp; surg_bun_t_perineum==F]</code></pre>
+<p>we will now look at the density distribution for csection births with anesthesia</p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-89-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec_w_anes %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 75 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 duration_max                0.110 
+##  2 medi_bun_t_observ           0.0641
+##  3 radi_bun_t_abdom            0.0623
+##  4 surg_bun_t_ant              0.0617
+##  5 surg_bun_t_antepartum       0.0617
+##  6 surg_bun_t_art              0.0617
+##  7 surg_bun_t_part             0.0617
+##  8 surg_bun_t_tum              0.0617
+##  9 path_bun_t_patho            0.061 
+## 10 path_bun_t_pathologist      0.061 
+## # ... with 65 more rows</code></pre>
+<pre class="r"><code>birth_csec_w_anes &lt;- birth_csec_w_anes[ tp_med &gt; 6000]</code></pre>
+<pre class="r"><code>birth_csec_w_anes_btbv4 &lt;- birth_csec_w_anes %&gt;% btbv4()</code></pre>
+<pre class="r"><code>birth_csec_w_anes_bq &lt;- birth_csec_w_anes_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs=&quot;Obstetrics &amp; Gynecology&quot;,
+                                  specialization_reqs = &quot;Obstetrics|||Maternal &amp; Fetal Medicine&quot;
+                                  ),
+                                                .f=calculate_primary_doctor)
+                     ] %&gt;% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c(&quot;BOTH_DOC_FAIL_CRIT&quot;, &quot;TWO_FIT_ALL_SPECS&quot;, &quot;NONE_FIT_SPEC_REQ&quot;))] %&gt;% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %&gt;% 
+  .[,`:=`(procedure_type=4, procedure_modifier=&quot;Caesarean Delivery&quot;)]</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;ERIN A.S. CLARK&quot;  &quot;ROBERT M. SILVER&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;CHAD C LUNT&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;LAUREN H THEILEN&quot; &quot;MARCELA  SMID&quot;   
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;ROBERT WENDALL LATER&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;BRIAN L WOLSEY&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;LAYNE A SMITH&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;DOUGLAS A ALLEN&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;DOUGLAS A ALLEN&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;CHAD C LUNT&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;MICHAEL L DRAPER&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;ROBERT L ANDRES&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;DOUGLAS A ALLEN&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;ROBERT L ANDRES&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;CARA C HEUSER&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;CHAD C LUNT&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;JOHN DAVID LARAWAY&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)</code></pre>
+<p>##birth_csec_w_anes_w_sub_hosp_care</p>
+<p>we will now look at the density distribution for csection births with anesthesia that also had subsequent hospital care</p>
+<pre class="r"><code>birth_csec_w_anes_w_sub_hosp_care %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/birth.en-us_files/figure-html/unnamed-chunk-93-1.png" width="672" /></p>
+<pre class="r"><code>birth_csec_w_anes_w_sub_hosp_care %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 110 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 anes_bun_t_cs                 0.127
+##  2 radi_bun_t_contrast           0.119
+##  3 medi_bun_t_immun              0.119
+##  4 medi_bun_t_immunization       0.119
+##  5 medi_bun_t_vacc               0.119
+##  6 medi_bun_t_iiv                0.118
+##  7 anes_bun_t_add - on           0.117
+##  8 medi_bun_t_clinic             0.112
+##  9 medi_bun_t_outpt              0.112
+## 10 radi_bun_t_ct                 0.111
+## # ... with 100 more rows</code></pre>
+<pre class="r"><code>birth_csec_w_anes_w_sub_hosp_care &lt;- birth_csec_w_anes_w_sub_hosp_care[ tp_med &gt; 6000]</code></pre>
+<pre class="r"><code>birth_csec_w_anes_w_sub_hosp_care_btbv4 &lt;- birth_csec_w_anes_w_sub_hosp_care %&gt;% btbv4()</code></pre>
+<pre class="r"><code>birth_csec_w_anes_w_sub_hosp_care_bq &lt;- birth_csec_w_anes_w_sub_hosp_care_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs=&quot;Obstetrics &amp; Gynecology&quot;,
+                                  specialization_reqs = &quot;Obstetrics|||Maternal &amp; Fetal Medicine&quot;
+                                  ),
+                                                .f=calculate_primary_doctor) %&gt;% as.character()
+                     ] %&gt;% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c(&quot;BOTH_DOC_FAIL_CRIT&quot;, &quot;TWO_FIT_ALL_SPECS&quot;, &quot;NONE_FIT_SPEC_REQ&quot;))] %&gt;% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %&gt;% 
+  .[,`:=`(procedure_type=5, procedure_modifier=&quot;Caesarean Delivery with Subsequent Hospital Care&quot;)]</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;ROBERT WENDALL LATER&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;TROY FLINT PORTER&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;CHAD C LUNT&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;ROBERT WENDALL LATER&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;LAYNE A SMITH&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;JHENETTE RENEE LAUDER&quot; &quot;AMY E SULLIVAN&quot;       
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;TROY FLINT PORTER&quot; &quot;CARA C HEUSER&quot;    
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;LAYNE A SMITH&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;DONNA  DIZON-TOWNSON&quot; &quot;JOHN DAVID LARAWAY&quot;  
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;TROY FLINT PORTER&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;NATALIE K LOEWEN&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;MICHELLE LYNNE PRECOURT DEBBINK&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;JOHN THOMAS PAAS&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;ROBERT WENDALL LATER&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;GLENN K SCHEMMER&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;JOHN DAVID LARAWAY&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;PAHL  BENCH&quot;    &quot;BRIAN L WOLSEY&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;JOHN DAVID LARAWAY&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;TROY FLINT PORTER&quot;  &quot;DOUGLAS S RICHARDS&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;MICHELLE LYNNE PRECOURT DEBBINK&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;TROY FLINT PORTER&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;GINA B. COX&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## [1] &quot;BRIAN L WOLSEY&quot;
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)
+## [1] &quot;multiple meet class req&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(specialization_reqs)) {: the condition has length &gt; 1 and
+## only the first element will be used</code></pre>
+<pre><code>## character(0)</code></pre>
+<pre class="r"><code>birth_csec_w_anes_w_sub_hosp_care_bq &lt;- birth_csec_w_anes_w_sub_hosp_care_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac  ,
+most_important_fac_npi, 
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]</code></pre>
+<pre class="r"><code>bq_table_upload(x=procedure_table, values= birth_csec_w_anes_w_sub_hosp_care_bq, create_disposition=&#39;CREATE_IF_NEEDED&#39;, write_disposition=&#39;WRITE_APPEND&#39;)</code></pre>
+<!-- ## vbac birth -->
+<!-- ```{r} -->
+<!-- birth_vbac <-  birth_vbac[,`:=`( -->
+<!--   surg_sp_name_clean = surg_sp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   surg_bp_name_clean = surg_bp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   medi_sp_name_clean = medi_sp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   medi_bp_name_clean = medi_bp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   radi_sp_name_clean = radi_sp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   radi_bp_name_clean = radi_bp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   path_sp_name_clean = path_sp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   path_bp_name_clean = path_bp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   anes_sp_name_clean = anes_sp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   anes_bp_name_clean = anes_bp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   faci_sp_name_clean = faci_sp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   faci_bp_name_clean = faci_bp_npi %>% map_chr(get_npi_standard_name) -->
+<!--   )] -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- birth_vbac %>% saveRDS("birth_vbac.RDS") -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- birth_vbac <- readRDS("birth_vbac.RDS") -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- birth_vbac[cnt > 5] %>% plot_med_density() %>% print() -->
+<!-- birth_vbac[cnt > 5] %>% get_tag_cor() %>% print() -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- birth_vbac %>% get_tag_density_information("anes_bun_t_cs") %>% print() -->
+<!-- ``` -->
+<!-- I am not going to do these ones right now. IF we end up wanting VBAC i will add it in later.  -->
+</div>
+</div>
+
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small">TAGGED IN</span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="/tags/caesarian-section/">Caesarian Section</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/vbac/">VBAC</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/vaginal-birth/">Vaginal Birth</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  
+      <nav >
+        <ul class="post-actions post-action-nav">
+          
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="/2020/12/appendectomy.en-us/" data-tooltip="Appendectomy">
+              
+                  <i class="fa fa-angle-left"></i>
+                  <span class="hide-xs hide-sm text-small icon-ml">NEXT</span>
+                </a>
+            </li>
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="/2020/12/hysterectomy.en-us/" data-tooltip="Hysterectomy">
+              
+                  <span class="hide-xs hide-sm text-small icon-mr">PREVIOUS</span>
+                  <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+          
+        </ul>
+      </nav>
+    <ul class="post-actions post-action-share" >
+      
+        <li class="post-action hide-lg hide-md hide-sm">
+          <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+            <i class="fa fa-share-alt"></i>
+          </a>
+        </li>
+        
+      
+      
+        <li class="post-action">
+          <a class="post-action-btn btn btn--default" href="#disqus_thread">
+            <i class="fa fa-comment-o"></i>
+          </a>
+        </li>
+      
+      <li class="post-action">
+        
+          <a class="post-action-btn btn btn--default" href="#">
+        
+          <i class="fa fa-list"></i>
+        </a>
+      </li>
+    </ul>
+  
+</div>
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2021 Utah OSA - Health Cost Compare . All Rights Reserved
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+        <div class="post-actions-wrap">
+  
+      <nav >
+        <ul class="post-actions post-action-nav">
+          
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="/2020/12/appendectomy.en-us/" data-tooltip="Appendectomy">
+              
+                  <i class="fa fa-angle-left"></i>
+                  <span class="hide-xs hide-sm text-small icon-ml">NEXT</span>
+                </a>
+            </li>
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="/2020/12/hysterectomy.en-us/" data-tooltip="Hysterectomy">
+              
+                  <span class="hide-xs hide-sm text-small icon-mr">PREVIOUS</span>
+                  <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+          
+        </ul>
+      </nav>
+    <ul class="post-actions post-action-share" >
+      
+        <li class="post-action hide-lg hide-md hide-sm">
+          <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+            <i class="fa fa-share-alt"></i>
+          </a>
+        </li>
+        
+      
+      
+        <li class="post-action">
+          <a class="post-action-btn btn btn--default" href="#disqus_thread">
+            <i class="fa fa-comment-o"></i>
+          </a>
+        </li>
+      
+      <li class="post-action">
+        
+          <a class="post-action-btn btn btn--default" href="#">
+        
+          <i class="fa fa-list"></i>
+        </a>
+      </li>
+    </ul>
+  
+</div>
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+  <i id="btn-close-shareoptions" class="fa fa-close"></i>
+  <ul class="share-options">
+    
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="/img/osa-seal.jpg" alt="Author&#39;s picture" />
+    
+    <h4 id="about-card-name">Utah OSA - Health Cost Compare </h4>
+    
+      <div id="about-card-bio">Documentation for Office of the State Auditor&rsquo;s methodology in contstructing the Health Care Compare Tool</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Performance Audit Team
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        SLC, Utah
+      </div>
+    
+  </div>
+</div>
+
+    
+
+    
+  
+    
+      <div id="cover" style="background-image:url('/images/cover.jpg');"></div>
+    
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
+
+
+<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+
+
+<script lang="javascript">
+window.onload = updateMinWidth;
+window.onresize = updateMinWidth;
+document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
+function updateMinWidth() {
+  var sidebar = document.getElementById("sidebar");
+  var main = document.getElementById("main");
+  main.style.minWidth = "";
+  var w1 = getComputedStyle(main).getPropertyValue("min-width");
+  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
+  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
+  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
+}
+</script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = '\/2020\/12\/birth.en-us\/';
+          
+            this.page.identifier = '\/2020\/12\/birth.en-us\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'hugo-tranquilpeak-theme';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+    
+  </body>
+</html>
+

@@ -1,0 +1,789 @@
+---
+title: Birth
+author: Alexander Nielson
+date: '2020-12-31'
+slug: birth.en-us
+categories:
+  - Major Surgery
+tags:
+  - Caesarian Section
+  - VBAC
+  - Vaginal Birth
+keywords:
+  - tech
+---
+
+
+# Introduction
+
+In this section we will:
+* identify which Delivery procedures were excluded and why
+* identify which different Delivery subgroups were created and why
+
+
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+
+
+# Load Libraries
+Load Libraries
+```{r, message=FALSE}
+library(data.table)
+library(tidyverse)
+library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github("utah-osa/hcctools2", upgrade="never" )
+library(hcctools2)
+```
+
+Establish color palettes
+
+```{r}
+cust_color_pal1 <- c(
+        "Anesthesia" = "#f3476f",
+        "Facility" = "#e86a33",
+        "Medicine Proc" = "#e0a426",
+        "Pathology" = "#77bf45",
+        "Radiology" = "#617ff7",
+        "Surgery" = "#a974ee"
+    )
+
+cust_color_pal2 <- c(
+        "TRUE" = "#617ff7",
+        "FALSE" = "#e0a426"
+    )
+
+cust_color_pal3 <- c(
+        "above avg" = "#f3476f",
+        "avg" = "#77bf45",
+        "below avg" = "#a974ee"
+    )
+
+
+
+  fac_ref_regex <- "(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)"
+```
+
+# Connect to GCP database
+```{r}
+bigrquery::bq_auth(path = 'D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json')
+
+# set my project ID and dataset name
+project_id <- 'healthcare-compare-prod'
+dataset_name <- 'healthcare_compare'
+
+con <- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)
+```
+
+
+# Get NPI table
+```{r}
+query <-  paste0("SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`")
+
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full <- dbGetQuery(con, query) %>%
+  data.table()
+```
+
+
+# get a subset of the NPI providers based upon taxonomy groups
+```{r}
+gs4_auth(email="alexnielson@utah.gov")
+```
+
+
+```{r}
+surgery <- read_sheet("https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0",
+                    sheet="major_surgery") %>% as.data.table
+surgery <-  surgery[is.na(Remove) ] %>% .[["NUCC Classification"]]
+```
+
+```{r}
+  npi_prov_pair <-  npi_full[osa_class %in% surgery] %>%
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ]
+```
+
+
+# Load Data
+
+```{r}
+bun_proc <-  disk.frame("full_apcd.df")
+```
+
+
+# Birth
+59610, 59612, 59614 - vbac delivery
+59510, 59514, 59515 - cesarean delivery
+59400, 59409, 59410 - Obstetrical care
+
+omit:
+
+d & c after delivery
+
+```{r}
+birth_vag <- bun_proc[surg_bun_t_obstetrical ==T & surg_bun_t_care==T]
+birth_csec <- bun_proc[surg_bun_t_delivery==T & surg_bun_t_cesarean==T]
+birth_vbac <- bun_proc[surg_bun_t_delivery==T & stri_detect_regex(surg_bun_descr,"vbac")==T]
+```
+
+## vaginal birth
+
+
+```{r}
+birth_vag <-  birth_vag[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %>% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %>% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %>% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %>% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %>% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %>% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %>% map_chr(get_npi_standard_name)
+  )]
+```
+
+
+```{r}
+birth_vag %>% saveRDS("birth_vag.RDS")
+```
+
+
+
+```{r}
+birth_vag <- birth_vag[cnt>5 & faci_bun_sum_med > 1000]
+```
+
+
+We will now examine the vaginal birth deliveries's median price distribution and cost correlated tags.
+
+```{r}
+birth_vag[cnt>5 & faci_bun_sum_med > 1000]%>% plot_med_density() %>% print()
+birth_vag[cnt>5 & faci_bun_sum_med > 1000]%>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+birth_vag %>% get_tag_density_information("surg_bun_t_abdomen") %>% print()
+```
+
+There are only two with a exploratory abdomen surgery code, so we will omit them from the standard.
+```{r}
+birth_vag <- birth_vag[surg_bun_t_abdomen==F]
+```
+
+
+We will now examine the vaginal birth deliveries's median price distribution and cost correlated tags.
+
+```{r}
+birth_vag%>% plot_med_density() %>% print()
+birth_vag%>% get_tag_cor() %>% print()
+```
+
+It now looks like the main differece has to do with the facility type. ie: 
+Initial hospital care
+Subsequent observation care
+Subsequent hospital care
+Emergency dept visit
+
+
+```{r}
+birth_vag %>% get_tag_density_information("faci_bun_t_initial") %>% print()
+```
+
+```{r}
+birth_vag %>% get_tag_density_information("faci_bun_t_emergency") %>% print()
+```
+
+```{r}
+birth_vag_init_hosp_care <- birth_vag[faci_bun_t_initial==T & faci_bun_t_hospital==T & faci_bun_t_care==T]
+```
+
+```{r}
+birth_vag <- birth_vag[faci_bun_t_initial==F & faci_bun_t_hospital==F & faci_bun_t_care==F]
+```
+
+We will now examine the vaginal birth deliveries's median price distribution and cost correlated tags.
+
+```{r}
+birth_vag%>% plot_med_density() %>% print()
+birth_vag%>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+birth_vag %>% get_tag_density_information("anes_bun_t_anes") %>% print()
+```
+
+
+```{r}
+birth_vag <-  birth_vag[anes_bun_t_anes==T]
+birth_bag_no_anes <- birth_vag[anes_bun_t_anes==F]
+```
+
+We will now examine the vaginal birth deliveries's median price distribution and cost correlated tags.
+
+```{r}
+birth_vag%>% plot_med_density() %>% print()
+birth_vag%>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+birth_vag %>% get_tag_density_information("faci_bun_t_emergency") %>% print()
+```
+
+
+```{r}
+birth_vag_w_anes_w_emerg_dept <- birth_vag[faci_bun_t_emergency==T & faci_bun_t_dept==T]
+birth_vag <- birth_vag[faci_bun_t_emergency==F & faci_bun_t_dept==F]
+```
+
+
+We will now examine the vaginal birth deliveries's median price distribution and cost correlated tags.
+
+```{r}
+birth_vag%>% plot_med_density() %>% print()
+birth_vag%>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+birth_vag %>% get_tag_density_information("surg_bun_t_hysterectomy") %>% print()
+```
+
+```{r}
+birth_vag <- birth_vag[surg_bun_t_hysterectomy==F]
+```
+
+
+```{r}
+birth_vag %>% get_tag_density_information("path_bun_t_tissue") %>% print()
+```
+
+
+
+We will now examine the vaginal birth deliveries's median price distribution and cost correlated tags.
+
+```{r}
+birth_vag%>% plot_med_density() %>% print()
+birth_vag%>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_vag %>% get_tag_density_information("path_bun_t_patho") %>% print()
+```
+
+```{r}
+birth_vag_with_patho <- birth_vag[path_bun_t_patho==T]
+birth_vag <- birth_vag[path_bun_t_patho==F]
+```
+
+
+We will now examine the vaginal birth deliveries's median price distribution and cost correlated tags.
+
+```{r}
+birth_vag %>% plot_med_density() %>% print()
+birth_vag %>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_vag[surg_bun_t_uterus==T] %>% nrow()
+birth_vag %>% get_tag_density_information("path_bun_t_complete") %>% print()
+birth_vag %>% get_tag_density_information("radi_bun_t_ct") %>% print()
+```
+
+```{r}
+birth_vag <- birth_vag[surg_bun_t_uterus==F & path_bun_t_complete==F  & radi_bun_t_ct==F]
+```
+
+```{r}
+birth_vag %>% plot_med_density() %>% print()
+birth_vag %>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_vag[cnt > 10 & faci_bun_sum_med > 2000] %>% plot_med_density() %>% print()
+birth_vag[cnt > 10 & faci_bun_sum_med > 2000] %>% get_tag_cor() %>% print()
+birth_vag[cnt > 10 & faci_bun_sum_med > 2000] %>% nrow()
+```
+
+```{r}
+birth_vag <- birth_vag[cnt > 10 & faci_bun_sum_med > 2000]
+```
+
+
+```{r}
+birth_vag %>% get_tag_density_information("medi_bun_t_clinic") %>% print()
+```
+
+```{r}
+birth_vag <- birth_vag[medi_bun_t_clinic==F]
+```
+
+
+```{r}
+birth_vag %>% plot_med_density() %>% print()
+birth_vag %>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_vag %>% get_tag_density_information("radi_bun_t_pelvi") %>% print()
+```
+
+```{r}
+birth_vag <- birth_vag[radi_bun_t_pelvi==F]
+```
+
+```{r}
+birth_vag %>% plot_med_density() %>% print()
+birth_vag %>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_vag[path_bun_t_fetal==T] %>% nrow()
+```
+
+
+```{r}
+birth_vag <- birth_vag[path_bun_t_fetal==F]
+```
+
+```{r}
+birth_vag %>% plot_med_density() %>% print()
+birth_vag %>% get_tag_cor() %>% print()
+```
+
+## btb for vaginal births
+
+```{r}
+birth_vag_btbv4 <- birth_vag %>% btbv4()
+```
+
+
+```{r}
+birth_vag_bq <- birth_vag_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs="Obstetrics & Gynecology"#,
+                                  # specialization_reqs = "Obstetrics|||Maternal & Fetal Medicine"
+                                  ),
+                                                .f=calculate_primary_doctor) %>% as.character()
+                     ] %>% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS"))] %>% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %>% 
+  .[,`:=`(procedure_type=5, procedure_modifier="Vaginal Delivery")]
+```
+
+
+
+```{r}
+birth_vag_bq <- birth_vag_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac	,
+most_important_fac_npi,	
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]
+```
+
+
+```{r, eval=FALSE}
+bq_table_upload(x=procedure_table, values= birth_vag_bq, create_disposition='CREATE_IF_NEEDED', write_disposition='WRITE_APPEND')
+```
+
+
+## birth_csec
+```{r}
+birth_csec %>% plot_med_density() %>% print()
+birth_csec %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+birth_csec <-  birth_csec[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %>% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %>% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %>% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %>% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %>% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %>% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %>% map_chr(get_npi_standard_name)
+  )]
+```
+
+```{r}
+birth_csec %>% saveRDS("birth_csec.RDS")
+```
+
+```{r}
+birth_csec <- readRDS("birth_csec.RDS")
+```
+
+
+```{r}
+birth_csec[cnt>5 & faci_bun_sum_med > 3000 & tp_med < 60000] %>% plot_med_density() %>% print()
+birth_csec[cnt>5 & faci_bun_sum_med > 3000 & tp_med < 60000] %>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_csec <- birth_csec[cnt>5 & faci_bun_sum_med > 3000 & tp_med < 60000]
+```
+
+
+```{r}
+birth_csec %>% plot_med_density() %>% print()
+birth_csec %>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_csec %>% get_tag_density_information("faci_bun_t_initial") %>% print()
+```
+
+Statiscally significant different groups, but too small to represent own group. 
+
+
+```{r}
+birth_csec <- birth_csec[faci_bun_t_initial==F]
+```
+
+Now, we wil recheck the median price density and highly correlated tags.
+```{r}
+birth_csec %>% plot_med_density() %>% print()
+birth_csec %>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_csec %>% get_tag_density_information("faci_bun_t_emergency") %>% print()
+```
+
+```{r}
+birth_csec <- birth_csec[faci_bun_t_emergency == F  & faci_bun_t_discharge == F]
+
+```
+
+ow, we wil recheck the median price density and highly correlated tags.
+```{r}
+birth_csec %>% plot_med_density() %>% print()
+birth_csec %>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_csec %>% get_tag_density_information("anes_bun_t_vag") %>% print()
+```
+
+```{r}
+birth_csec_w_anes <- birth_csec[anes_bun_t_vag==T]
+birth_csec_n_anes <- birth_csec[anes_bun_t_vag==F]
+```
+
+## birth_csec_n_anes
+```{r}
+birth_csec_n_anes %>% plot_med_density() %>% print()
+birth_csec_n_anes %>% get_tag_cor() %>% print()
+```
+
+## birth_csec_w_anes
+
+we will now look at the density distribution for csection births with anesthesia
+```{r}
+birth_csec_w_anes %>% plot_med_density() %>% print()
+birth_csec_w_anes %>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_csec_w_anes[surg_bun_t_remove==T] %>% nrow()
+```
+only one in with that tag
+```{r}
+birth_csec_w_anes <- birth_csec_w_anes[surg_bun_t_remove==F]
+```
+
+```{r}
+birth_csec_w_anes[surg_bun_t_ovarian==T] %>% nrow()
+```
+only one in with that tag
+```{r}
+birth_csec_w_anes <- birth_csec_w_anes[surg_bun_t_ovarian==F]
+```
+
+
+we will now look at the density distribution for csection births with anesthesia
+```{r}
+birth_csec_w_anes %>% plot_med_density() %>% print()
+birth_csec_w_anes %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+birth_csec %>% get_tag_density_information("radi_bun_t_artery") %>% print()
+```
+
+```{r}
+birth_csec_w_anes <- birth_csec_w_anes[radi_bun_t_artery==F]
+```
+
+
+we will now look at the density distribution for csection births with anesthesia
+```{r}
+birth_csec_w_anes %>% plot_med_density() %>% print()
+birth_csec_w_anes %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+birth_csec_w_anes %>% get_tag_density_information("faci_bun_t_hospital") %>% print()
+```
+
+
+```{r}
+birth_csec_w_anes_w_sub_hosp_care <- birth_csec_w_anes[faci_bun_t_care==T & faci_bun_t_subsequent ==T]
+birth_csec_w_anes <- birth_csec_w_anes[faci_bun_t_care==F & faci_bun_t_subsequent ==F]
+```
+
+
+
+we will now look at the density distribution for csection births with anesthesia
+```{r}
+birth_csec_w_anes %>% plot_med_density() %>% print()
+birth_csec_w_anes %>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_csec_w_anes %>% get_tag_density_information("path_bun_t_complete") %>% print()
+birth_csec_w_anes[path_bun_t_colon==T] %>% nrow()
+birth_csec_w_anes[surg_bun_t_abdom==T] %>% nrow()
+```
+
+There is weak evidence to split, but since only 19 of them are listed a complete pathology panel, I will omit the 19. This also gets rid of a few outliers. 
+
+
+
+```{r}
+birth_csec_w_anes <- birth_csec_w_anes[path_bun_t_complete==F & path_bun_t_colon==F & surg_bun_t_abdom==F]
+```
+
+we will now look at the density distribution for csection births with anesthesia
+```{r}
+birth_csec_w_anes %>% plot_med_density() %>% print()
+birth_csec_w_anes %>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_csec_w_anes %>% get_tag_density_information("surg_bun_t_exc") %>% print()
+```
+Small subset and not a standard procedure based on frequency. 
+
+
+```{r}
+birth_csec_w_anes <- birth_csec_w_anes[surg_bun_t_exc==F]
+```
+
+we will now look at the density distribution for csection births with anesthesia
+```{r}
+birth_csec_w_anes %>% plot_med_density() %>% print()
+birth_csec_w_anes %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+birth_csec_w_anes[surg_bun_t_injection==T] %>% nrow()
+birth_csec_w_anes[path_bun_t_amniotic==T] %>% nrow()
+birth_csec_w_anes[surg_bun_t_antepartum==T] %>% nrow()
+birth_csec_w_anes[surg_bun_t_perineum==T] %>% nrow()
+```
+
+```{r}
+birth_csec_w_anes <- birth_csec_w_anes[surg_bun_t_injection==F & path_bun_t_amniotic==F & surg_bun_t_perineum==F]
+```
+
+
+we will now look at the density distribution for csection births with anesthesia
+```{r}
+birth_csec_w_anes %>% plot_med_density() %>% print()
+birth_csec_w_anes %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+birth_csec_w_anes <- birth_csec_w_anes[ tp_med > 6000]
+```
+
+
+
+```{r}
+birth_csec_w_anes_btbv4 <- birth_csec_w_anes %>% btbv4()
+```
+
+```{r}
+birth_csec_w_anes_bq <- birth_csec_w_anes_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs="Obstetrics & Gynecology",
+                                  specialization_reqs = "Obstetrics|||Maternal & Fetal Medicine"
+                                  ),
+                                                .f=calculate_primary_doctor)
+                     ] %>% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS", "NONE_FIT_SPEC_REQ"))] %>% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %>% 
+  .[,`:=`(procedure_type=4, procedure_modifier="Caesarean Delivery")]
+```
+
+
+##birth_csec_w_anes_w_sub_hosp_care
+
+
+we will now look at the density distribution for csection births with anesthesia that also had subsequent hospital care
+```{r}
+birth_csec_w_anes_w_sub_hosp_care %>% plot_med_density() %>% print()
+birth_csec_w_anes_w_sub_hosp_care %>% get_tag_cor() %>% print()
+```
+
+```{r}
+birth_csec_w_anes_w_sub_hosp_care <- birth_csec_w_anes_w_sub_hosp_care[ tp_med > 6000]
+```
+
+```{r}
+birth_csec_w_anes_w_sub_hosp_care_btbv4 <- birth_csec_w_anes_w_sub_hosp_care %>% btbv4()
+```
+
+
+
+```{r}
+birth_csec_w_anes_w_sub_hosp_care_bq <- birth_csec_w_anes_w_sub_hosp_care_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs="Obstetrics & Gynecology",
+                                  specialization_reqs = "Obstetrics|||Maternal & Fetal Medicine"
+                                  ),
+                                                .f=calculate_primary_doctor) %>% as.character()
+                     ] %>% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS", "NONE_FIT_SPEC_REQ"))] %>% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %>% 
+  .[,`:=`(procedure_type=5, procedure_modifier="Caesarean Delivery with Subsequent Hospital Care")]
+```
+
+
+
+```{r}
+birth_csec_w_anes_w_sub_hosp_care_bq <- birth_csec_w_anes_w_sub_hosp_care_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac	,
+most_important_fac_npi,	
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]
+```
+
+```{r, eval=FALSE}
+bq_table_upload(x=procedure_table, values= birth_csec_w_anes_w_sub_hosp_care_bq, create_disposition='CREATE_IF_NEEDED', write_disposition='WRITE_APPEND')
+```
+
+
+
+
+<!-- ## vbac birth -->
+
+<!-- ```{r} -->
+<!-- birth_vbac <-  birth_vbac[,`:=`( -->
+<!--   surg_sp_name_clean = surg_sp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   surg_bp_name_clean = surg_bp_npi %>% map_chr(get_npi_standard_name), -->
+
+<!--   medi_sp_name_clean = medi_sp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   medi_bp_name_clean = medi_bp_npi %>% map_chr(get_npi_standard_name), -->
+
+<!--   radi_sp_name_clean = radi_sp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   radi_bp_name_clean = radi_bp_npi %>% map_chr(get_npi_standard_name), -->
+
+<!--   path_sp_name_clean = path_sp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   path_bp_name_clean = path_bp_npi %>% map_chr(get_npi_standard_name), -->
+
+<!--   anes_sp_name_clean = anes_sp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   anes_bp_name_clean = anes_bp_npi %>% map_chr(get_npi_standard_name), -->
+
+<!--   faci_sp_name_clean = faci_sp_npi %>% map_chr(get_npi_standard_name), -->
+<!--   faci_bp_name_clean = faci_bp_npi %>% map_chr(get_npi_standard_name) -->
+<!--   )] -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- birth_vbac %>% saveRDS("birth_vbac.RDS") -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- birth_vbac <- readRDS("birth_vbac.RDS") -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- birth_vbac[cnt > 5] %>% plot_med_density() %>% print() -->
+<!-- birth_vbac[cnt > 5] %>% get_tag_cor() %>% print() -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- birth_vbac %>% get_tag_density_information("anes_bun_t_cs") %>% print() -->
+<!-- ``` -->
+
+
+
+<!-- I am not going to do these ones right now. IF we end up wanting VBAC i will add it in later.  -->

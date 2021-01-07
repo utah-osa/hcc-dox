@@ -1,0 +1,1001 @@
+---
+title: Hernia Repair
+author: Alexander Nielson
+date: '2020-12-30'
+slug: hernia-repair.en-us
+categories:
+  - Major Surgery
+tags:
+  - Hernia
+  - Repair
+keywords:
+  - tech
+---
+
+<script src="/rmarkdown-libs/jquery/jquery.min.js"></script>
+<script src="/rmarkdown-libs/elevate-section-attrs/elevate-section-attrs.js"></script>
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In this section we will:
+* identify which Hernia Repair procedures were excluded and why
+* identify which different Hernia Repair subgroups were created and why</p>
+<p>If you have questions or concerns about this data please contact Alexander Nielson (<a href="mailto:alexnielson@utah.gov" class="email">alexnielson@utah.gov</a>)</p>
+</div>
+<div id="load-libraries" class="section level1">
+<h1>Load Libraries</h1>
+<p>Load Libraries</p>
+<pre class="r"><code>library(data.table)
+library(tidyverse)</code></pre>
+<pre><code>## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;
+## when loading &#39;dplyr&#39;</code></pre>
+<pre class="r"><code>library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )
+library(hcctools2)</code></pre>
+<p>Establish color palettes</p>
+<pre class="r"><code>cust_color_pal1 &lt;- c(
+        &quot;Anesthesia&quot; = &quot;#f3476f&quot;,
+        &quot;Facility&quot; = &quot;#e86a33&quot;,
+        &quot;Medicine Proc&quot; = &quot;#e0a426&quot;,
+        &quot;Pathology&quot; = &quot;#77bf45&quot;,
+        &quot;Radiology&quot; = &quot;#617ff7&quot;,
+        &quot;Surgery&quot; = &quot;#a974ee&quot;
+    )
+
+cust_color_pal2 &lt;- c(
+        &quot;TRUE&quot; = &quot;#617ff7&quot;,
+        &quot;FALSE&quot; = &quot;#e0a426&quot;
+    )
+
+cust_color_pal3 &lt;- c(
+        &quot;above avg&quot; = &quot;#f3476f&quot;,
+        &quot;avg&quot; = &quot;#77bf45&quot;,
+        &quot;below avg&quot; = &quot;#a974ee&quot;
+    )
+
+
+
+  fac_ref_regex &lt;- &quot;(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)&quot;</code></pre>
+</div>
+<div id="connect-to-gcp-database" class="section level1">
+<h1>Connect to GCP database</h1>
+<pre class="r"><code>bigrquery::bq_auth(path = &#39;D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json&#39;)
+
+# set my project ID and dataset name
+project_id &lt;- &#39;healthcare-compare-prod&#39;
+dataset_name &lt;- &#39;healthcare_compare&#39;
+
+con &lt;- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)</code></pre>
+</div>
+<div id="get-npi-table" class="section level1">
+<h1>Get NPI table</h1>
+<pre class="r"><code>query &lt;-  paste0(&quot;SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`&quot;)
+
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full &lt;- dbGetQuery(con, query) %&gt;%
+  data.table()</code></pre>
+</div>
+<div id="get-a-subset-of-the-npi-providers-based-upon-taxonomy-groups" class="section level1">
+<h1>get a subset of the NPI providers based upon taxonomy groups</h1>
+<pre class="r"><code>gs4_auth(email=&quot;alexnielson@utah.gov&quot;)</code></pre>
+<pre class="r"><code>surgery &lt;- read_sheet(&quot;https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0&quot;,
+                    sheet=&quot;major_surgery&quot;) %&gt;% as.data.table</code></pre>
+<pre><code>## Reading from &quot;Doctor Types to Keep&quot;</code></pre>
+<pre><code>## Range &quot;&#39;major_surgery&#39;&quot;</code></pre>
+<pre class="r"><code>surgery &lt;-  surgery[is.na(Remove) ] %&gt;% .[[&quot;NUCC Classification&quot;]]</code></pre>
+<pre class="r"><code>  npi_prov_pair &lt;-  npi_full[osa_class %in% surgery] %&gt;%
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ]</code></pre>
+</div>
+<div id="load-data" class="section level1">
+<h1>Load Data</h1>
+<pre class="r"><code>bun_proc &lt;-  disk.frame(&quot;full_apcd.df&quot;)</code></pre>
+<pre class="r"><code>hernia &lt;- bun_proc[surg_bun_descr %&gt;% stri_detect_regex(&quot;hern&quot;)]</code></pre>
+<pre class="r"><code>hernia &lt;-  hernia[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %&gt;% map_chr(get_npi_standard_name)
+  )]</code></pre>
+<!-- ```{r} -->
+<!-- hernia_btbv4 <- hernia %>% btbv4() -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- hernia_bq <- hernia_btbv4[, -->
+<!--                      primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1, -->
+<!--                                   doctor_npi2=doctor_npi_str2, -->
+<!--                                   class_reqs="Surgery"#, -->
+<!--                                   # specialization_reqs = "" -->
+<!--                                   ), -->
+<!--                                                 .f=calculate_primary_doctor) %>% as.character() -->
+<!--                      ] %>%  -->
+<!--   #Filter out any procedures where our doctors fail both criteria.  -->
+<!--   .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS", "NONE_FIT_SPEC_REQ"))] %>%  -->
+<!--   .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1, -->
+<!--                                    doctor_npi_str1, -->
+<!--                                    doctor_npi_str2)] %>%  -->
+<!--   .[,`:=`(procedure_type=6, procedure_modifier="Hernia Repair")] -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- hernia_bq %>% count(most_important_fac) %>% arrange(desc(n)) %>% View() -->
+<!-- ``` -->
+<!-- hernia -->
+<!-- ```{r} -->
+<!-- hernia %>% .[["facility_str"]] %>% stri_split_regex(",") %>% unlist() %>% stri_trim_both()  %>% sort() %>% table() %>% View() -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- hernia_btbv4 %>% count(most_important_fac) %>% arrange(desc(n)) %>% View() -->
+<!-- ``` -->
+<pre class="r"><code>hernia %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+<pre class="r"><code>hernia %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 465 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 duration_max              0.876
+##  2 duration_mean             0.685
+##  3 surg_bun_t_imag           0.652
+##  4 surg_bun_t_fluid          0.612
+##  5 medi_bun_t_subseq         0.596
+##  6 radi_bun_t_head           0.55 
+##  7 medi_bun_t_with           0.504
+##  8 medi_bun_t_eye_exam       0.460
+##  9 radi_bun_t_upper          0.441
+## 10 surg_bun_t_cath           0.419
+## # ... with 455 more rows</code></pre>
+<pre class="r"><code>hernia %&gt;% plot_price_vs_duration() %&gt;% print()</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<pre class="r"><code>hernia &lt;- hernia[duration_mean&lt;2 &amp; tp_med &gt; 0 &amp; tp_med &lt; 50000 &amp; faci_bun_sum_med &gt; 500]</code></pre>
+<pre class="r"><code>hernia %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<pre class="r"><code>hernia %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 411 x 2
+##    name              correlation
+##    &lt;chr&gt;                   &lt;dbl&gt;
+##  1 duration_mean           0.5  
+##  2 surg_bun_t_lap          0.382
+##  3 anes_bun_t_upper        0.352
+##  4 anes_bun_t_hernia       0.342
+##  5 anes_bun_t_repair       0.339
+##  6 surg_bun_t_repair       0.338
+##  7 surg_bun_t_esoph        0.336
+##  8 anes_bun_t_surg         0.333
+##  9 medi_bun_t_inject       0.329
+## 10 anes_bun_t_abdom        0.305
+## # ... with 401 more rows</code></pre>
+<pre class="r"><code>hernia %&gt;% get_tag_density_information(&quot;surg_bun_t_lap&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_lap&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 795</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-15-2.png" width="672" /></p>
+<pre class="r"><code>hernia_lap &lt;- hernia[surg_bun_t_lap ==T]
+hernia_n_lap &lt;- hernia[surg_bun_t_lap==F]</code></pre>
+</div>
+<div id="hernia_lap" class="section level1">
+<h1>hernia_lap</h1>
+<pre class="r"><code>hernia_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 306 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 duration_max             0.516
+##  2 duration_mean            0.505
+##  3 medi_bun_t_sodium        0.349
+##  4 medi_bun_t_inject        0.348
+##  5 surg_bun_t_esoph         0.336
+##  6 anes_bun_t_lower         0.335
+##  7 surg_bun_t_hernia        0.303
+##  8 surg_bun_t_art           0.282
+##  9 surg_bun_t_partial       0.278
+## 10 anes_bun_t_upper         0.276
+## # ... with 296 more rows</code></pre>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_density_information(&quot;medi_bun_t_sodium&quot; ) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ medi_bun_t_sodium&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1850</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-18-2.png" width="672" /></p>
+<pre class="r"><code>hernia_lap &lt;- hernia_lap[medi_bun_t_sodium == T]</code></pre>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_esoph&quot; ) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_esoph&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1190</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-20-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-20-2.png" width="672" /></p>
+<pre class="r"><code>hernia_lap &lt;- hernia_lap[surg_bun_t_esoph==F]</code></pre>
+<pre class="r"><code>hernia_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-22-1.png" width="672" /></p>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 224 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 surg_bun_t_lymph           0.286
+##  2 surg_bun_t_urethra         0.286
+##  3 surg_bun_t_prostat         0.280
+##  4 surg_bun_t_prostate        0.280
+##  5 surg_bun_t_bladder         0.27 
+##  6 surg_bun_t_injection       0.246
+##  7 surg_bun_t_block           0.237
+##  8 anes_bun_t_lower           0.230
+##  9 surg_bun_t_scope           0.228
+## 10 surg_bun_t_stone           0.228
+## # ... with 214 more rows</code></pre>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_lymph&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_lymph&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 3950</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-23-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-23-2.png" width="672" /></p>
+<pre class="r"><code>hernia_lap &lt;- hernia_lap[surg_bun_t_lymph==F]</code></pre>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_urethra&quot;) %&gt;% print()</code></pre>
+<pre class="r"><code>hernia_lap &lt;- hernia_lap[surg_bun_t_urethra==F]</code></pre>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_prostate&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_prostate&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1670</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-27-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-27-2.png" width="672" /></p>
+<pre class="r"><code>hernia_lap &lt;- hernia_lap[surg_bun_t_prostate==F]</code></pre>
+<pre class="r"><code>hernia_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-29-1.png" width="672" /></p>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 215 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 surg_bun_t_injection       0.256
+##  2 surg_bun_t_graft           0.243
+##  3 surg_bun_t_musc            0.243
+##  4 surg_bun_t_block           0.234
+##  5 surg_bun_t_skin            0.226
+##  6 anes_bun_t_lower           0.208
+##  7 anes_bun_t_upper           0.207
+##  8 anes_bun_t_kidney          0.184
+##  9 anes_bun_t_ureter          0.184
+## 10 surg_bun_t_ant             0.167
+## # ... with 205 more rows</code></pre>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_graft&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_graft&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1770</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-30-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-30-2.png" width="672" /></p>
+<pre class="r"><code>hernia_lap &lt;- hernia_lap[surg_bun_t_graft==F]</code></pre>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_block&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_block&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1180</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-32-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-32-2.png" width="672" /></p>
+<pre class="r"><code>hernia_lap &lt;- hernia_lap[surg_bun_t_block==F]</code></pre>
+<pre class="r"><code># hernia_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_skin&quot;) %&gt;% print()</code></pre>
+<pre class="r"><code>hernia_lap &lt;- hernia_lap[surg_bun_t_skin==F]</code></pre>
+<pre class="r"><code>hernia_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-36-1.png" width="672" /></p>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 186 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 anes_bun_t_kidney            0.227
+##  2 anes_bun_t_ureter            0.227
+##  3 surg_bun_t_ant               0.208
+##  4 path_bun_t_total             0.203
+##  5 surg_bun_t_drug              0.200
+##  6 surg_bun_t_nephrectomy       0.200
+##  7 surg_bun_t_implant           0.194
+##  8 anes_bun_t_lower             0.192
+##  9 path_bun_t_time              0.191
+## 10 anes_bun_t_upper             0.187
+## # ... with 176 more rows</code></pre>
+<pre class="r"><code># hernia_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_injection&quot;) %&gt;% print()
+hernia_lap %&gt;% get_tag_density_information(&quot;anes_bun_t_upper&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_upper&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1310</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-37-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-37-2.png" width="672" /></p>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_density_information(&quot;anes_bun_t_kidney&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.
+## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_kidney&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1680</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-37-3.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-37-4.png" width="672" /></p>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_density_information(&quot;anes_bun_t_ureter&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.
+## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_ureter&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1680</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-37-5.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-37-6.png" width="672" /></p>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_ant&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.
+## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_ant&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 2300</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-37-7.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-37-8.png" width="672" /></p>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_density_information(&quot;path_bun_t_complete&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.
+## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ path_bun_t_complete&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1170</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-37-9.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-37-10.png" width="672" /></p>
+<pre class="r"><code>hernia_lap &lt;- hernia_lap[surg_bun_t_injection ==F &amp; anes_bun_t_kidney == F &amp; anes_bun_t_ureter==F &amp; surg_bun_t_ant==F ]</code></pre>
+<pre class="r"><code>hernia_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-39-1.png" width="672" /></p>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 173 x 2
+##    name                  correlation
+##    &lt;chr&gt;                       &lt;dbl&gt;
+##  1 anes_bun_t_upper            0.193
+##  2 anes_bun_t_lower            0.176
+##  3 path_bun_t_total            0.169
+##  4 surg_bun_t_abd              0.150
+##  5 path_bun_t_complete         0.140
+##  6 path_bun_t_magnesium        0.123
+##  7 path_bun_t_phosphorus       0.123
+##  8 surg_bun_t_uterus           0.121
+##  9 path_bun_t_time             0.109
+## 10 path_bun_t_metabolic        0.107
+## # ... with 163 more rows</code></pre>
+<p>hernia_lap = surg_bun_t_uters</p>
+<pre class="r"><code>hernia_lap &lt;- hernia_lap[surg_bun_t_uterus == F &amp; surg_bun_t_uterus==F ]</code></pre>
+<pre class="r"><code>hernia_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-41-1.png" width="672" /></p>
+<pre class="r"><code>hernia_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 172 x 2
+##    name                  correlation
+##    &lt;chr&gt;                       &lt;dbl&gt;
+##  1 anes_bun_t_upper           0.197 
+##  2 anes_bun_t_lower           0.180 
+##  3 path_bun_t_total           0.154 
+##  4 surg_bun_t_abd             0.153 
+##  5 path_bun_t_complete        0.131 
+##  6 path_bun_t_magnesium       0.124 
+##  7 path_bun_t_phosphorus      0.124 
+##  8 path_bun_t_time            0.110 
+##  9 surg_bun_t_mesh            0.0975
+## 10 path_bun_t_metabolic       0.0956
+## # ... with 162 more rows</code></pre>
+<pre class="r"><code>hernia_lap_btbv4 &lt;- hernia_lap %&gt;% btbv4() %&gt;% .[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs=&quot;Surgery&quot;#,
+                                  # specialization_reqs = &quot;&quot;
+                                  ),
+                                                .f=calculate_primary_doctor) %&gt;% as.character()
+                     ] %&gt;% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c(&quot;BOTH_DOC_FAIL_CRIT&quot;, &quot;TWO_FIT_ALL_SPECS&quot;, &quot;NONE_FIT_SPEC_REQ&quot;))] %&gt;% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %&gt;% 
+  .[,`:=`(procedure_type=6, procedure_modifier=&quot;Hernia Laparoscopy Repair&quot;)]</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ROBERT  PATTERSON&quot; &quot;MILDA  SHAPIRO&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;RODRICK D MCKINLAY&quot; &quot;NICHOLAS J PAULK&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;TREVOR  DAY&quot;           &quot;CAMERON TALMAGE BLACK&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MILDA  SHAPIRO&quot;     &quot;WILLIAM NOEL PEUGH&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MATTHEW T BAKER&quot; &quot;BRIAN  GILL&quot;    
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ROBERT  PATTERSON&quot;  &quot;WILLIAM NOEL PEUGH&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;KYLE G DUNNING&quot;           &quot;MEGAN WOLTHUIS GRUNANDER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID E SKARDA&quot; &quot;DEVAN  GRINER&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DANIELLE M. ADAMS&quot;  &quot;VANESSA MARIE HART&quot;</code></pre>
+<pre class="r"><code>hernia_lap_btbv4 %&gt;% count(most_important_fac) %&gt;% arrange(desc(n)) %&gt;% View()</code></pre>
+</div>
+<div id="herna_n_lap" class="section level1">
+<h1>herna_n_lap</h1>
+<pre class="r"><code>hernia_n_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-44-1.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 329 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 duration_mean              0.56 
+##  2 faci_bun_t_hospital        0.399
+##  3 faci_bun_t_care            0.379
+##  4 surg_bun_t_skin            0.362
+##  5 surg_bun_t_graft           0.356
+##  6 surg_bun_t_intestine       0.348
+##  7 surg_bun_t_small           0.348
+##  8 surg_bun_t_musc            0.340
+##  9 faci_bun_t_initial         0.337
+## 10 medi_bun_t_inject          0.333
+## # ... with 319 more rows</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;faci_bun_t_hospital&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ faci_bun_t_hospital&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 2530</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-45-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-45-2.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap &lt;-  hernia_n_lap[faci_bun_t_hospital==F]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_skin&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_skin&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1940</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-47-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-47-2.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap &lt;- hernia_n_lap[surg_bun_t_skin == F &amp; surg_bun_t_graft==F ]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-49-1.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 301 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 duration_max              0.504
+##  2 duration_mean             0.491
+##  3 surg_bun_t_esoph          0.331
+##  4 radi_bun_t_ct             0.279
+##  5 radi_bun_t_chest          0.272
+##  6 surg_bun_t_hernia         0.268
+##  7 surg_bun_t_repair         0.257
+##  8 radi_bun_t_upper          0.240
+##  9 radi_bun_t_contrast       0.239
+## 10 anes_bun_t_upper          0.237
+## # ... with 291 more rows</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_esoph&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_esoph&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 492</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-50-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-50-2.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap &lt;- hernia_n_lap[surg_bun_t_esoph == F]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;radi_bun_t_chest&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ radi_bun_t_chest&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 2480</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-52-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-52-2.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap &lt;- hernia_n_lap[radi_bun_t_chest == F]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;radi_bun_t_contrast&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ radi_bun_t_contrast&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 2080</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-54-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-54-2.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap &lt;- hernia_n_lap[radi_bun_t_contrast == F]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_umbil&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_umbil&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 595</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-56-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-56-2.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-57-1.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 290 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 duration_max                 0.356
+##  2 duration_mean                0.343
+##  3 surg_bun_t_hernia            0.296
+##  4 surg_bun_t_repair            0.270
+##  5 surg_bun_t_mesh              0.250
+##  6 surg_bun_t_injection         0.236
+##  7 surg_bun_t_umbil             0.234
+##  8 surg_bun_t_art               0.210
+##  9 surg_bun_t_arthro            0.210
+## 10 surg_bun_t_arthroscopy       0.210
+## # ... with 280 more rows</code></pre>
+<pre class="r"><code>hernia_n_lap[surg_bun_t_arthroscopy==T] %&gt;% nrow() #%&gt;% get_tag_density_information(&quot;surg_bun_t_arthroscopy&quot;) %&gt;% print()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>hernia_n_lap[surg_bun_t_uterus==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre class="r"><code>hernia_n_lap[path_bun_t_typing==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre class="r"><code>hernia_n_lap[path_bun_t_anti==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre class="r"><code>hernia_n_lap[path_bun_t_tissue==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 98</code></pre>
+<pre class="r"><code>hernia_n_lap[surg_bun_t_interlaminar==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre class="r"><code>hernia_n_lap[faci_bun_t_est==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 53</code></pre>
+<pre class="r"><code>hernia_n_lap[path_bun_t_urinalysis==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre class="r"><code>hernia_n_lap &lt;- hernia_n_lap[surg_bun_t_arthroscopy==F &amp; surg_bun_t_uterus==F &amp; path_bun_t_typing==F &amp; path_bun_t_anti==F &amp; surg_bun_t_interlaminar==F &amp; path_bun_t_urinalysis==F]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-60-1.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 258 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 duration_max                 0.366
+##  2 duration_mean                0.356
+##  3 surg_bun_t_hernia            0.307
+##  4 surg_bun_t_repair            0.294
+##  5 surg_bun_t_umbil             0.271
+##  6 surg_bun_t_mesh              0.268
+##  7 surg_bun_t_injection         0.232
+##  8 surg_bun_t_tum               0.187
+##  9 path_bun_t_patho             0.148
+## 10 path_bun_t_pathologist       0.148
+## # ... with 248 more rows</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;path_bun_t_patho&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ path_bun_t_patho&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 914</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-61-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-61-2.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap &lt;- hernia_n_lap[path_bun_t_patho==F]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;medi_bun_t_normal&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ medi_bun_t_normal&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 2150</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-63-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-63-2.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap &lt;- hernia_n_lap[medi_bun_t_normal==F]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-65-1.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 207 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 duration_max               0.318
+##  2 surg_bun_t_hernia          0.314
+##  3 duration_mean              0.310
+##  4 surg_bun_t_repair          0.276
+##  5 surg_bun_t_mesh            0.259
+##  6 surg_bun_t_umbil           0.258
+##  7 surg_bun_t_injection       0.212
+##  8 medi_bun_t_splt            0.166
+##  9 surg_bun_t_revise          0.152
+## 10 surg_bun_t_ablate          0.148
+## # ... with 197 more rows</code></pre>
+<pre class="r"><code>hernia_n_lap[surg_bun_t_tumor==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 0</code></pre>
+<pre class="r"><code>hernia_n_lap[surg_bun_t_injection==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 80</code></pre>
+<pre class="r"><code>hernia_n_lap[medi_bun_t_splt==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>hernia_n_lap[surg_bun_t_revise==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre class="r"><code>hernia_n_lap[surg_bun_t_ablate==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>hernia_n_lap[surg_bun_t_ear==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>hernia_n_lap[surg_bun_t_defect==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>hernia_n_lap[anes_bun_t_abdom==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 60</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_injection&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_injection&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 619</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-67-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-67-2.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;anes_bun_t_abdom&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_abdom&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 685</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-68-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-68-2.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap &lt;- hernia_n_lap[surg_bun_t_injection==F &amp; medi_bun_t_splt==F &amp; surg_bun_t_revise ==F &amp; surg_bun_t_ablate==F &amp;  surg_bun_t_ear==F &amp; surg_bun_t_defect==F &amp; anes_bun_t_abdom==F]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-70-1.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 173 x 2
+##    name                  correlation
+##    &lt;chr&gt;                       &lt;dbl&gt;
+##  1 surg_bun_t_hernia          0.299 
+##  2 surg_bun_t_repair          0.284 
+##  3 surg_bun_t_mesh            0.267 
+##  4 surg_bun_t_umbil           0.261 
+##  5 duration_max               0.240 
+##  6 duration_mean              0.229 
+##  7 medi_bun_t_oral            0.110 
+##  8 surg_bun_t_suspension      0.108 
+##  9 surg_bun_t_testis          0.108 
+## 10 anes_bun_t_anes            0.0941
+## # ... with 163 more rows</code></pre>
+<pre class="r"><code>hernia_n_lap &lt;- hernia_n_lap[tp_med &gt; 2000 &amp; tp_med &lt; 20000]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-72-1.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 172 x 2
+##    name                  correlation
+##    &lt;chr&gt;                       &lt;dbl&gt;
+##  1 surg_bun_t_hernia          0.294 
+##  2 surg_bun_t_umbil           0.271 
+##  3 surg_bun_t_repair          0.268 
+##  4 surg_bun_t_mesh            0.238 
+##  5 surg_bun_t_testis          0.129 
+##  6 surg_bun_t_suspension      0.129 
+##  7 medi_bun_t_oral            0.121 
+##  8 duration_max               0.119 
+##  9 surg_bun_t_arm             0.0949
+## 10 surg_bun_t_elbow           0.0949
+## # ... with 162 more rows</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_testis&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_testis&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 670</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-73-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-73-2.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap &lt;- hernia_n_lap[surg_bun_t_testis == F ]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;surg_bun_t_suspension&quot;) %&gt;% print()</code></pre>
+<pre class="r"><code>hernia_n_lap &lt;- hernia_n_lap[surg_bun_t_suspension == F ]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-77-1.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 166 x 2
+##    name              correlation
+##    &lt;chr&gt;                   &lt;dbl&gt;
+##  1 surg_bun_t_hernia      0.276 
+##  2 surg_bun_t_repair      0.273 
+##  3 surg_bun_t_umbil       0.259 
+##  4 surg_bun_t_mesh        0.247 
+##  5 duration_max           0.121 
+##  6 medi_bun_t_oral        0.120 
+##  7 surg_bun_t_arm         0.0969
+##  8 surg_bun_t_elbow       0.0969
+##  9 anes_bun_t_head        0.0969
+## 10 anes_bun_t_neck        0.0969
+## # ... with 156 more rows</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_density_information(&quot;medi_bun_t_oral&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ medi_bun_t_oral&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 477</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-78-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-78-2.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap &lt;- hernia_n_lap[medi_bun_t_oral ==F]</code></pre>
+<pre class="r"><code>hernia_n_lap %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hernia-repair.en-us_files/figure-html/unnamed-chunk-80-1.png" width="672" /></p>
+<pre class="r"><code>hernia_n_lap %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 161 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 surg_bun_t_hernia       0.275 
+##  2 surg_bun_t_repair       0.274 
+##  3 surg_bun_t_umbil        0.254 
+##  4 surg_bun_t_mesh         0.250 
+##  5 duration_max            0.121 
+##  6 surg_bun_t_arm          0.0972
+##  7 surg_bun_t_elbow        0.0972
+##  8 anes_bun_t_head         0.0972
+##  9 anes_bun_t_neck         0.0972
+## 10 medi_bun_t_tracing      0.0959
+## # ... with 151 more rows</code></pre>
+<pre class="r"><code>hernia_n_lap_btbv4 &lt;- hernia_n_lap %&gt;% btbv4() %&gt;% .[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs=&quot;Surgery&quot;#,
+                                  # specialization_reqs = &quot;&quot;
+                                  ),
+                                                .f=calculate_primary_doctor) %&gt;% as.character()
+                     ] %&gt;% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c(&quot;BOTH_DOC_FAIL_CRIT&quot;, &quot;TWO_FIT_ALL_SPECS&quot;, &quot;NONE_FIT_SPEC_REQ&quot;))] %&gt;% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %&gt;% 
+  .[,`:=`(procedure_type=6, procedure_modifier=&quot;Hernia Repair&quot;)]</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;TREVOR  DAY&quot;           &quot;CAMERON TALMAGE BLACK&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JOHN LARSEN CLAYTON&quot;   &quot;ALICE FAITH YUO CHUNG&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;RODRICK D MCKINLAY&quot;    &quot;STEVEN CHARLES SIMPER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;TIMOTHY C HOLLINGSED&quot; &quot;ROBERT L RODRIGUES&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MILDA  SHAPIRO&quot;     &quot;WILLIAM NOEL PEUGH&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DANIELLE M. ADAMS&quot;  &quot;VANESSA MARIE HART&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ROBERT  PATTERSON&quot; &quot;MILDA  SHAPIRO&quot;</code></pre>
+<pre class="r"><code>hernia_full &lt;- hernia_lap_btbv4 %&gt;% rbind(hernia_n_lap_btbv4)</code></pre>
+<pre class="r"><code>hernia_full %&gt;% count(most_important_fac) %&gt;% arrange(desc(n)) %&gt;% View()</code></pre>
+<pre class="r"><code>hernia_bq &lt;- hernia_full %&gt;% .[,.(tp_med_med = median(tp_med_med),
+                            tp_med_surg = median(tp_med_surg),
+                            tp_med_medi = median(tp_med_medi),
+                            tp_med_path = median(tp_med_path),
+                            tp_med_radi = median(tp_med_radi),
+                            tp_med_anes = median(tp_med_anes),
+                            tp_med_faci = median(tp_med_faci),
+                            tp_cnt_cnt = sum(tp_cnt_cnt)
+                            ),
+                         by=c(&quot;procedure_type&quot;, &quot;procedure_modifier&quot;,&quot;primary_doctor&quot;, &quot;primary_doctor_npi&quot;, &quot;most_important_fac&quot;, &quot;most_important_fac_npi&quot;)] %&gt;% 
+  
+  .[,.(
+  primary_doctor,
+  primary_doctor_npi,
+  most_important_fac    ,
+  most_important_fac_npi,   
+  procedure_type,
+  procedure_modifier,
+  tp_med_med,
+  tp_med_surg,
+  tp_med_medi,
+  tp_med_path,
+  tp_med_radi,
+  tp_med_anes,
+  tp_med_faci,
+  tp_cnt_cnt,
+  ingest_date = Sys.Date()
+)]</code></pre>
+<pre class="r"><code>hernia_bq$tp_med_med %&gt;% summary()</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##    2612    6034    7784    8399   10392   19949</code></pre>
+<pre class="r"><code>hernia_bq %&gt;% fwrite(&quot;2020-12-17-hernia_repiar_fixed.csv&quot;)</code></pre>
+<pre class="r"><code>hernia_bq &lt;- hernia_bq[,.(
+  primary_doctor,
+  primary_doctor_npi,
+  most_important_fac    ,
+  most_important_fac_npi,   
+  procedure_type,
+  procedure_modifier,
+  tp_med_med,
+  tp_med_surg,
+  tp_med_medi,
+  tp_med_path,
+  tp_med_radi,
+  tp_med_anes,
+  tp_med_faci,
+  ingest_date = Sys.Date()
+)]</code></pre>
+<pre class="r"><code>bq_table_upload(x=procedure_table, values= hernia_bq, create_disposition=&#39;CREATE_IF_NEEDED&#39;, write_disposition=&#39;WRITE_APPEND&#39;)</code></pre>
+</div>

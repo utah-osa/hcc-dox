@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Health Care Compare Documentation</title>
+    <link>/</link>
+    <description>Recent content on Health Care Compare Documentation</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 31 Dec 2020 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Appendectomy</title>
+      <link>/2020/12/appendectomy.en-us/</link>
+      <pubDate>Thu, 31 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/12/appendectomy.en-us/</guid>
+      <description>IntroductionIn this section we will:* identify which Appendectomy procedures were excluded and why* identify which different Appendectomy subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &amp;#39;vctrs::data_frame&amp;#39; by &amp;#39;tibble::data_frame&amp;#39;## when loading &amp;#39;dplyr&amp;#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&amp;quot;utah-osa/hcctools2&amp;quot;, upgrade=&amp;quot;never&amp;quot; )library(hcctools2)Establish color palettes</description>
+    </item>
+    
+    <item>
+      <title>Birth</title>
+      <link>/2020/12/birth.en-us/</link>
+      <pubDate>Thu, 31 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/12/birth.en-us/</guid>
+      <description>IntroductionIn this section we will:* identify which Delivery procedures were excluded and why* identify which different Delivery subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &amp;#39;vctrs::data_frame&amp;#39; by &amp;#39;tibble::data_frame&amp;#39;## when loading &amp;#39;dplyr&amp;#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&amp;quot;utah-osa/hcctools2&amp;quot;, upgrade=&amp;quot;never&amp;quot; )library(hcctools2)Establish color palettes</description>
+    </item>
+    
+    <item>
+      <title>Hysterectomy</title>
+      <link>/2020/12/hysterectomy.en-us/</link>
+      <pubDate>Thu, 31 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/12/hysterectomy.en-us/</guid>
+      <description>IntroductionIn this section we will:* identify which Hysterectomy procedures were excluded and why* identify which different Hysterectomy Repair subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &amp;#39;vctrs::data_frame&amp;#39; by &amp;#39;tibble::data_frame&amp;#39;## when loading &amp;#39;dplyr&amp;#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&amp;quot;utah-osa/hcctools2&amp;quot;, upgrade=&amp;quot;never&amp;quot; )library(hcctools2)Establish color palettes</description>
+    </item>
+    
+    <item>
+      <title>Hernia Repair</title>
+      <link>/2020/12/hernia-repair.en-us/</link>
+      <pubDate>Wed, 30 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/12/hernia-repair.en-us/</guid>
+      <description>IntroductionIn this section we will:* identify which Hernia Repair procedures were excluded and why* identify which different Hernia Repair subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &amp;#39;vctrs::data_frame&amp;#39; by &amp;#39;tibble::data_frame&amp;#39;## when loading &amp;#39;dplyr&amp;#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&amp;quot;utah-osa/hcctools2&amp;quot;, upgrade=&amp;quot;never&amp;quot; )library(hcctools2)Establish color palettes</description>
+    </item>
+    
+    <item>
+      <title>Hip Replacement</title>
+      <link>/2020/12/hip-replacement.en-us/</link>
+      <pubDate>Wed, 30 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/12/hip-replacement.en-us/</guid>
+      <description>IntroductionIn this section we will:
+* identify which Hip Replacement procedures were excluded and why* identify which different Hip Replacement subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &amp;#39;vctrs::data_frame&amp;#39; by &amp;#39;tibble::data_frame&amp;#39;## when loading &amp;#39;dplyr&amp;#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&amp;quot;utah-osa/hcctools2&amp;quot;, upgrade=&amp;quot;never&amp;quot; )library(hcctools2)Establish color palettes</description>
+    </item>
+    
+    <item>
+      <title>Knee Replacement</title>
+      <link>/2020/12/knee-replacement.en-us/</link>
+      <pubDate>Wed, 30 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/12/knee-replacement.en-us/</guid>
+      <description>IntroductionIn this section we will:
+* identify which Knee Replacement procedures were excluded and why* identify which different Knee Replacement subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &amp;#39;vctrs::data_frame&amp;#39; by &amp;#39;tibble::data_frame&amp;#39;## when loading &amp;#39;dplyr&amp;#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&amp;quot;utah-osa/hcctools2&amp;quot;, upgrade=&amp;quot;never&amp;quot; )library(hcctools2)Establish color palettes</description>
+    </item>
+    
+    <item>
+      <title>Office Visit</title>
+      <link>/2020/12/office-visit.en-us/</link>
+      <pubDate>Fri, 18 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/12/office-visit.en-us/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Colonoscopy</title>
+      <link>/2020/07/colonoscopy/</link>
+      <pubDate>Fri, 31 Jul 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/07/colonoscopy/</guid>
+      <description>IntroductionIn this section we will:
+* identify which colonoscopy procedures were excluded and why* identify which different colonoscopy subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &amp;#39;vctrs::data_frame&amp;#39; by &amp;#39;tibble::data_frame&amp;#39;## when loading &amp;#39;dplyr&amp;#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&amp;quot;utah-osa/hcctools2&amp;quot;, upgrade=&amp;quot;never&amp;quot; )library(hcctools2)Establish color palettes</description>
+    </item>
+    
+  </channel>
+</rss>

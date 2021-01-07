@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Hernia on Health Care Compare Documentation</title>
+    <link>/tags/hernia/</link>
+    <description>Recent content in Hernia on Health Care Compare Documentation</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 30 Dec 2020 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/hernia/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Hernia Repair</title>
+      <link>/2020/12/hernia-repair.en-us/</link>
+      <pubDate>Wed, 30 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/12/hernia-repair.en-us/</guid>
+      <description>IntroductionIn this section we will:* identify which Hernia Repair procedures were excluded and why* identify which different Hernia Repair subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &amp;#39;vctrs::data_frame&amp;#39; by &amp;#39;tibble::data_frame&amp;#39;## when loading &amp;#39;dplyr&amp;#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&amp;quot;utah-osa/hcctools2&amp;quot;, upgrade=&amp;quot;never&amp;quot; )library(hcctools2)Establish color palettes</description>
+    </item>
+    
+  </channel>
+</rss>

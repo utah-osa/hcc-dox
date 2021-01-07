@@ -1,0 +1,651 @@
+---
+title: Hernia Repair
+author: Alexander Nielson
+date: '2020-12-30'
+slug: hernia-repair.en-us
+categories:
+  - Major Surgery
+tags:
+  - Hernia
+  - Repair
+keywords:
+  - tech
+---
+
+# Introduction
+
+In this section we will:
+* identify which Hernia Repair procedures were excluded and why
+* identify which different Hernia Repair subgroups were created and why
+
+
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+
+
+# Load Libraries
+Load Libraries
+```{r, message=FALSE}
+library(data.table)
+library(tidyverse)
+library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github("utah-osa/hcctools2", upgrade="never" )
+library(hcctools2)
+```
+
+Establish color palettes
+
+```{r}
+cust_color_pal1 <- c(
+        "Anesthesia" = "#f3476f",
+        "Facility" = "#e86a33",
+        "Medicine Proc" = "#e0a426",
+        "Pathology" = "#77bf45",
+        "Radiology" = "#617ff7",
+        "Surgery" = "#a974ee"
+    )
+
+cust_color_pal2 <- c(
+        "TRUE" = "#617ff7",
+        "FALSE" = "#e0a426"
+    )
+
+cust_color_pal3 <- c(
+        "above avg" = "#f3476f",
+        "avg" = "#77bf45",
+        "below avg" = "#a974ee"
+    )
+
+
+
+  fac_ref_regex <- "(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)"
+```
+
+# Connect to GCP database
+```{r}
+bigrquery::bq_auth(path = 'D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json')
+
+# set my project ID and dataset name
+project_id <- 'healthcare-compare-prod'
+dataset_name <- 'healthcare_compare'
+
+con <- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)
+```
+
+
+# Get NPI table
+```{r}
+query <-  paste0("SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`")
+
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full <- dbGetQuery(con, query) %>%
+  data.table()
+```
+
+
+# get a subset of the NPI providers based upon taxonomy groups
+```{r}
+gs4_auth(email="alexnielson@utah.gov")
+```
+
+
+```{r}
+surgery <- read_sheet("https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0",
+                    sheet="major_surgery") %>% as.data.table
+surgery <-  surgery[is.na(Remove) ] %>% .[["NUCC Classification"]]
+```
+
+```{r}
+  npi_prov_pair <-  npi_full[osa_class %in% surgery] %>%
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ]
+```
+
+
+# Load Data
+
+```{r}
+bun_proc <-  disk.frame("full_apcd.df")
+```
+
+
+
+```{r}
+hernia <- bun_proc[surg_bun_descr %>% stri_detect_regex("hern")]
+```
+
+
+```{r}
+hernia <-  hernia[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %>% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %>% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %>% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %>% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %>% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %>% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %>% map_chr(get_npi_standard_name)
+  )]
+```
+
+<!-- ```{r} -->
+<!-- hernia_btbv4 <- hernia %>% btbv4() -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- hernia_bq <- hernia_btbv4[, -->
+<!--                      primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1, -->
+<!--                                   doctor_npi2=doctor_npi_str2, -->
+<!--                                   class_reqs="Surgery"#, -->
+<!--                                   # specialization_reqs = "" -->
+<!--                                   ), -->
+<!--                                                 .f=calculate_primary_doctor) %>% as.character() -->
+<!--                      ] %>%  -->
+<!--   #Filter out any procedures where our doctors fail both criteria.  -->
+<!--   .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS", "NONE_FIT_SPEC_REQ"))] %>%  -->
+<!--   .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1, -->
+<!--                                    doctor_npi_str1, -->
+<!--                                    doctor_npi_str2)] %>%  -->
+<!--   .[,`:=`(procedure_type=6, procedure_modifier="Hernia Repair")] -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- hernia_bq %>% count(most_important_fac) %>% arrange(desc(n)) %>% View() -->
+<!-- ``` -->
+
+
+
+<!-- hernia -->
+
+<!-- ```{r} -->
+<!-- hernia %>% .[["facility_str"]] %>% stri_split_regex(",") %>% unlist() %>% stri_trim_both()  %>% sort() %>% table() %>% View() -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- hernia_btbv4 %>% count(most_important_fac) %>% arrange(desc(n)) %>% View() -->
+<!-- ``` -->
+
+
+
+
+```{r}
+hernia %>% plot_med_density() %>% print()
+hernia %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hernia %>% plot_price_vs_duration() %>% print()
+```
+
+
+```{r}
+hernia <- hernia[duration_mean<2 & tp_med > 0 & tp_med < 50000 & faci_bun_sum_med > 500]
+```
+
+
+```{r}
+hernia %>% plot_med_density() %>% print()
+hernia %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hernia %>% get_tag_density_information("surg_bun_t_lap") %>% print()
+```
+
+```{r}
+hernia_lap <- hernia[surg_bun_t_lap ==T]
+hernia_n_lap <- hernia[surg_bun_t_lap==F]
+```
+
+# hernia_lap
+```{r}
+hernia_lap %>% plot_med_density() %>% print()
+hernia_lap %>% get_tag_cor() %>% print()
+```
+
+```{r}
+
+hernia_lap %>% get_tag_density_information("medi_bun_t_sodium" ) %>% print()
+```
+
+```{r}
+hernia_lap <- hernia_lap[medi_bun_t_sodium == T]
+```
+
+```{r}
+hernia_lap %>% get_tag_density_information("surg_bun_t_esoph" ) %>% print()
+```
+
+```{r}
+hernia_lap <- hernia_lap[surg_bun_t_esoph==F]
+```
+
+```{r}
+hernia_lap %>% plot_med_density() %>% print()
+hernia_lap %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hernia_lap %>% get_tag_density_information("surg_bun_t_lymph") %>% print()
+```
+
+```{r}
+hernia_lap <- hernia_lap[surg_bun_t_lymph==F]
+```
+
+
+```{r, eval=FALSE}
+hernia_lap %>% get_tag_density_information("surg_bun_t_urethra") %>% print()
+```
+
+```{r}
+hernia_lap <- hernia_lap[surg_bun_t_urethra==F]
+```
+
+
+```{r}
+hernia_lap %>% get_tag_density_information("surg_bun_t_prostate") %>% print()
+```
+
+```{r}
+hernia_lap <- hernia_lap[surg_bun_t_prostate==F]
+```
+
+
+```{r}
+hernia_lap %>% plot_med_density() %>% print()
+hernia_lap %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hernia_lap %>% get_tag_density_information("surg_bun_t_graft") %>% print()
+```
+
+```{r}
+hernia_lap <- hernia_lap[surg_bun_t_graft==F]
+```
+
+```{r}
+hernia_lap %>% get_tag_density_information("surg_bun_t_block") %>% print()
+```
+
+```{r}
+hernia_lap <- hernia_lap[surg_bun_t_block==F]
+```
+
+
+```{r}
+# hernia_lap %>% get_tag_density_information("surg_bun_t_skin") %>% print()
+```
+```{r}
+hernia_lap <- hernia_lap[surg_bun_t_skin==F]
+```
+
+
+```{r}
+hernia_lap %>% plot_med_density() %>% print()
+hernia_lap %>% get_tag_cor() %>% print()
+```
+
+```{r}
+# hernia_lap %>% get_tag_density_information("surg_bun_t_injection") %>% print()
+hernia_lap %>% get_tag_density_information("anes_bun_t_upper") %>% print()
+hernia_lap %>% get_tag_density_information("anes_bun_t_kidney") %>% print()
+hernia_lap %>% get_tag_density_information("anes_bun_t_ureter") %>% print()
+hernia_lap %>% get_tag_density_information("surg_bun_t_ant") %>% print()
+hernia_lap %>% get_tag_density_information("path_bun_t_complete") %>% print()
+```
+
+
+```{r}
+hernia_lap <- hernia_lap[surg_bun_t_injection ==F & anes_bun_t_kidney == F & anes_bun_t_ureter==F & surg_bun_t_ant==F ]
+```
+
+```{r}
+hernia_lap %>% plot_med_density() %>% print()
+hernia_lap %>% get_tag_cor() %>% print()
+```
+
+hernia_lap = surg_bun_t_uters
+```{r}
+hernia_lap <- hernia_lap[surg_bun_t_uterus == F & surg_bun_t_uterus==F ]
+```
+
+```{r}
+hernia_lap %>% plot_med_density() %>% print()
+hernia_lap %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hernia_lap_btbv4 <- hernia_lap %>% btbv4() %>% .[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs="Surgery"#,
+                                  # specialization_reqs = ""
+                                  ),
+                                                .f=calculate_primary_doctor) %>% as.character()
+                     ] %>% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS", "NONE_FIT_SPEC_REQ"))] %>% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %>% 
+  .[,`:=`(procedure_type=6, procedure_modifier="Hernia Laparoscopy Repair")]
+```
+
+```{r, eval=FALSE}
+hernia_lap_btbv4 %>% count(most_important_fac) %>% arrange(desc(n)) %>% View()
+```
+
+
+
+# herna_n_lap 
+
+```{r}
+hernia_n_lap %>% plot_med_density() %>% print()
+hernia_n_lap %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hernia_n_lap %>% get_tag_density_information("faci_bun_t_hospital") %>% print()
+```
+
+```{r}
+hernia_n_lap <-  hernia_n_lap[faci_bun_t_hospital==F]
+```
+
+
+
+```{r}
+hernia_n_lap %>% get_tag_density_information("surg_bun_t_skin") %>% print()
+```
+
+```{r}
+hernia_n_lap <- hernia_n_lap[surg_bun_t_skin == F & surg_bun_t_graft==F ]
+```
+
+```{r}
+hernia_n_lap %>% plot_med_density() %>% print()
+hernia_n_lap %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+hernia_n_lap %>% get_tag_density_information("surg_bun_t_esoph") %>% print()
+```
+
+```{r}
+hernia_n_lap <- hernia_n_lap[surg_bun_t_esoph == F]
+```
+
+
+```{r}
+hernia_n_lap %>% get_tag_density_information("radi_bun_t_chest") %>% print()
+```
+
+```{r}
+hernia_n_lap <- hernia_n_lap[radi_bun_t_chest == F]
+```
+
+
+```{r}
+hernia_n_lap %>% get_tag_density_information("radi_bun_t_contrast") %>% print()
+```
+
+```{r}
+hernia_n_lap <- hernia_n_lap[radi_bun_t_contrast == F]
+```
+
+
+```{r}
+hernia_n_lap %>% get_tag_density_information("surg_bun_t_umbil") %>% print()
+```
+
+```{r}
+hernia_n_lap %>% plot_med_density() %>% print()
+hernia_n_lap %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hernia_n_lap[surg_bun_t_arthroscopy==T] %>% nrow() #%>% get_tag_density_information("surg_bun_t_arthroscopy") %>% print()
+hernia_n_lap[surg_bun_t_uterus==T] %>% nrow()
+hernia_n_lap[path_bun_t_typing==T] %>% nrow()
+hernia_n_lap[path_bun_t_anti==T] %>% nrow()
+hernia_n_lap[path_bun_t_tissue==T] %>% nrow()
+hernia_n_lap[surg_bun_t_interlaminar==T] %>% nrow()
+hernia_n_lap[faci_bun_t_est==T] %>% nrow()
+hernia_n_lap[path_bun_t_urinalysis==T] %>% nrow()
+```
+
+```{r}
+hernia_n_lap <- hernia_n_lap[surg_bun_t_arthroscopy==F & surg_bun_t_uterus==F & path_bun_t_typing==F & path_bun_t_anti==F & surg_bun_t_interlaminar==F & path_bun_t_urinalysis==F]
+```
+
+```{r}
+hernia_n_lap %>% plot_med_density() %>% print()
+hernia_n_lap %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hernia_n_lap %>% get_tag_density_information("path_bun_t_patho") %>% print()
+```
+
+```{r}
+hernia_n_lap <- hernia_n_lap[path_bun_t_patho==F]
+```
+
+
+```{r}
+hernia_n_lap %>% get_tag_density_information("medi_bun_t_normal") %>% print()
+```
+
+```{r}
+hernia_n_lap <- hernia_n_lap[medi_bun_t_normal==F]
+```
+
+
+```{r}
+hernia_n_lap %>% plot_med_density() %>% print()
+hernia_n_lap %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hernia_n_lap[surg_bun_t_tumor==T] %>% nrow()
+hernia_n_lap[surg_bun_t_injection==T] %>% nrow()
+hernia_n_lap[medi_bun_t_splt==T] %>% nrow()
+hernia_n_lap[surg_bun_t_revise==T] %>% nrow()
+hernia_n_lap[surg_bun_t_ablate==T] %>% nrow()
+hernia_n_lap[surg_bun_t_ear==T] %>% nrow()
+hernia_n_lap[surg_bun_t_defect==T] %>% nrow()
+hernia_n_lap[anes_bun_t_abdom==T] %>% nrow()
+```
+
+
+
+
+
+```{r}
+hernia_n_lap %>% get_tag_density_information("surg_bun_t_injection") %>% print()
+```
+
+```{r}
+hernia_n_lap %>% get_tag_density_information("anes_bun_t_abdom") %>% print()
+```
+
+```{r}
+hernia_n_lap <- hernia_n_lap[surg_bun_t_injection==F & medi_bun_t_splt==F & surg_bun_t_revise ==F & surg_bun_t_ablate==F &  surg_bun_t_ear==F & surg_bun_t_defect==F & anes_bun_t_abdom==F]
+```
+
+```{r}
+hernia_n_lap %>% plot_med_density() %>% print()
+hernia_n_lap %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hernia_n_lap <- hernia_n_lap[tp_med > 2000 & tp_med < 20000]
+```
+
+```{r}
+hernia_n_lap %>% plot_med_density() %>% print()
+hernia_n_lap %>% get_tag_cor() %>% print()
+```
+```{r}
+hernia_n_lap %>% get_tag_density_information("surg_bun_t_testis") %>% print()
+```
+
+```{r}
+hernia_n_lap <- hernia_n_lap[surg_bun_t_testis == F ]
+```
+
+
+```{r, eval=FALSE}
+hernia_n_lap %>% get_tag_density_information("surg_bun_t_suspension") %>% print()
+```
+
+
+```{r}
+hernia_n_lap <- hernia_n_lap[surg_bun_t_suspension == F ]
+```
+
+
+```{r}
+hernia_n_lap %>% plot_med_density() %>% print()
+hernia_n_lap %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+hernia_n_lap %>% get_tag_density_information("medi_bun_t_oral") %>% print()
+```
+
+```{r}
+hernia_n_lap <- hernia_n_lap[medi_bun_t_oral ==F]
+```
+
+
+```{r}
+hernia_n_lap %>% plot_med_density() %>% print()
+hernia_n_lap %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+hernia_n_lap_btbv4 <- hernia_n_lap %>% btbv4() %>% .[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs="Surgery"#,
+                                  # specialization_reqs = ""
+                                  ),
+                                                .f=calculate_primary_doctor) %>% as.character()
+                     ] %>% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS", "NONE_FIT_SPEC_REQ"))] %>% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %>% 
+  .[,`:=`(procedure_type=6, procedure_modifier="Hernia Repair")]
+```
+
+
+
+```{r}
+hernia_full <- hernia_lap_btbv4 %>% rbind(hernia_n_lap_btbv4)
+```
+
+```{r, eval=FALSE}
+hernia_full %>% count(most_important_fac) %>% arrange(desc(n)) %>% View()
+```
+
+```{r}
+hernia_bq <- hernia_full %>% .[,.(tp_med_med = median(tp_med_med),
+                            tp_med_surg = median(tp_med_surg),
+                            tp_med_medi = median(tp_med_medi),
+                            tp_med_path = median(tp_med_path),
+                            tp_med_radi = median(tp_med_radi),
+                            tp_med_anes = median(tp_med_anes),
+                            tp_med_faci = median(tp_med_faci),
+                            tp_cnt_cnt = sum(tp_cnt_cnt)
+                            ),
+                         by=c("procedure_type", "procedure_modifier","primary_doctor", "primary_doctor_npi", "most_important_fac", "most_important_fac_npi")] %>% 
+  
+  .[,.(
+  primary_doctor,
+  primary_doctor_npi,
+  most_important_fac	,
+  most_important_fac_npi,	
+  procedure_type,
+  procedure_modifier,
+  tp_med_med,
+  tp_med_surg,
+  tp_med_medi,
+  tp_med_path,
+  tp_med_radi,
+  tp_med_anes,
+  tp_med_faci,
+  tp_cnt_cnt,
+  ingest_date = Sys.Date()
+)]
+```
+
+
+```{r}
+hernia_bq$tp_med_med %>% summary()
+```
+
+
+```{r}
+hernia_bq %>% fwrite("2020-12-17-hernia_repiar_fixed.csv")
+```
+
+
+```{r}
+hernia_bq <- hernia_bq[,.(
+  primary_doctor,
+  primary_doctor_npi,
+  most_important_fac	,
+  most_important_fac_npi,	
+  procedure_type,
+  procedure_modifier,
+  tp_med_med,
+  tp_med_surg,
+  tp_med_medi,
+  tp_med_path,
+  tp_med_radi,
+  tp_med_anes,
+  tp_med_faci,
+  ingest_date = Sys.Date()
+)]
+```
+
+
+
+```{r, eval=FALSE}
+bq_table_upload(x=procedure_table, values= hernia_bq, create_disposition='CREATE_IF_NEEDED', write_disposition='WRITE_APPEND')
+```
+
+

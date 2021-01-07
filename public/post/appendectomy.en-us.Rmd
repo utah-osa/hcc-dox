@@ -1,0 +1,499 @@
+---
+title: Appendectomy
+author: Alexander Nielson
+date: '2020-12-31'
+slug: appendectomy.en-us
+categories:
+  - Major Surgery
+tags:
+  - Appendectomy
+keywords:
+  - tech
+---
+
+
+# Introduction
+
+In this section we will:
+* identify which Appendectomy procedures were excluded and why
+* identify which different Appendectomy subgroups were created and why
+
+
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+
+
+# Load Libraries
+Load Libraries
+```{r, message=FALSE}
+library(data.table)
+library(tidyverse)
+library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github("utah-osa/hcctools2", upgrade="never" )
+library(hcctools2)
+```
+
+Establish color palettes
+
+```{r}
+cust_color_pal1 <- c(
+        "Anesthesia" = "#f3476f",
+        "Facility" = "#e86a33",
+        "Medicine Proc" = "#e0a426",
+        "Pathology" = "#77bf45",
+        "Radiology" = "#617ff7",
+        "Surgery" = "#a974ee"
+    )
+
+cust_color_pal2 <- c(
+        "TRUE" = "#617ff7",
+        "FALSE" = "#e0a426"
+    )
+
+cust_color_pal3 <- c(
+        "above avg" = "#f3476f",
+        "avg" = "#77bf45",
+        "below avg" = "#a974ee"
+    )
+
+
+
+  fac_ref_regex <- "(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)"
+```
+
+# Connect to GCP database
+```{r}
+bigrquery::bq_auth(path = 'D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json')
+
+# set my project ID and dataset name
+project_id <- 'healthcare-compare-prod'
+dataset_name <- 'healthcare_compare'
+
+con <- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)
+```
+
+
+# Get NPI table
+```{r}
+query <-  paste0("SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`")
+
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full <- dbGetQuery(con, query) %>%
+  data.table()
+```
+
+
+# get a subset of the NPI providers based upon taxonomy groups
+```{r}
+gs4_auth(email="alexnielson@utah.gov")
+```
+
+
+```{r}
+surgery <- read_sheet("https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0",
+                    sheet="major_surgery") %>% as.data.table
+surgery <-  surgery[is.na(Remove) ] %>% .[["NUCC Classification"]]
+```
+
+```{r}
+  npi_prov_pair <-  npi_full[osa_class %in% surgery] %>%
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ]
+```
+
+
+# Load Data
+
+```{r}
+bun_proc <-  disk.frame("full_apcd.df")
+```
+
+
+```{r}
+apendx <- bun_proc[surg_bun_t_appendectomy==T]
+```
+
+```{r}
+apendx <-  apendx[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %>% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %>% map_chr(get_npi_standard_name),
+
+  medi_sp_name_clean = medi_sp_npi %>% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %>% map_chr(get_npi_standard_name),
+
+  radi_sp_name_clean = radi_sp_npi %>% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %>% map_chr(get_npi_standard_name),
+
+  path_sp_name_clean = path_sp_npi %>% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %>% map_chr(get_npi_standard_name),
+
+  anes_sp_name_clean = anes_sp_npi %>% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %>% map_chr(get_npi_standard_name),
+
+  faci_sp_name_clean = faci_sp_npi %>% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %>% map_chr(get_npi_standard_name)
+  )]
+```
+
+```{r}
+apendx %>% saveRDS("apendx.RDS")
+```
+
+```{r}
+apendx <- readRDS("apendx.RDS")
+```
+
+
+examine appendectomy median price distribution and get the highly correlated tags
+
+```{r}
+apendx %>% plot_med_density() %>% print()
+apendx %>% get_tag_cor() %>% print()
+```
+
+```{r}
+apendx[surg_bun_t_lung==T] %>% nrow()
+```
+
+```{r}
+apendx[radi_bun_t_brain==T] %>% nrow()
+```
+
+
+```{r}
+apendx[cnt > 4 & faci_bun_sum_med > 1000 & surg_bun_t_lung==F & radi_bun_t_brain==F] %>% nrow()
+apendx[cnt > 4 & faci_bun_sum_med > 1000 & surg_bun_t_lung==F & radi_bun_t_brain==F] %>% plot_med_density() %>% print()
+apendx[cnt > 4 & faci_bun_sum_med > 1000 & surg_bun_t_lung==F & radi_bun_t_brain==F] %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+apendx <- apendx[cnt > 4 & faci_bun_sum_med > 1000 & surg_bun_t_lung==F & radi_bun_t_brain==F]
+```
+
+
+```{r}
+apendx %>% get_tag_density_information("medi_bun_t_sodium") %>% print()
+```
+
+```{r}
+apendx_w_sodium <- apendx[medi_bun_t_sodium == T & medi_bun_t_inject == T]
+apendx_n_sodium <- apendx[medi_bun_t_sodium == F & medi_bun_t_inject == F]
+
+```
+
+
+## appendectomy with sodium injection
+-usually antibiotics or anesthesia
+
+examine the median price density and the highly correlated tags
+
+```{r}
+apendx_w_sodium %>% plot_med_density() %>% print()
+apendx_w_sodium %>% get_tag_cor() %>% print()
+```
+
+```{r}
+apendx_w_sodium[medi_bun_t_flu==T] %>% nrow()
+apendx_w_sodium[surg_bun_t_removal==T] %>% nrow()
+apendx_w_sodium[faci_bun_t_critical==T] %>% nrow()
+apendx_w_sodium[path_bun_t_immuno==T] %>% nrow()
+```
+
+```{r}
+apendx_w_sodium <- apendx_w_sodium[medi_bun_t_flu==F& surg_bun_t_removal==F & faci_bun_t_critical==F & path_bun_t_immuno==F ]
+```
+
+
+
+examine the median price density and the highly correlated tags
+
+```{r}
+apendx_w_sodium %>% plot_med_density() %>% print()
+apendx_w_sodium %>% get_tag_cor() %>% print()
+```
+
+```{r}
+apendx_w_sodium %>% get_tag_density_information("faci_bun_t_emergency") %>% print()
+```
+
+### at emergency department
+
+```{r}
+apendx_w_sodium_at_emerg <- apendx_w_sodium[faci_bun_t_emergency==T]
+```
+
+examine the median price density and the highly correlated tags
+
+```{r}
+apendx_w_sodium_at_emerg %>% plot_med_density() %>% print()
+apendx_w_sodium_at_emerg %>% get_tag_cor() %>% print()
+```
+
+```{r}
+apendx_w_sodium_at_emerg[path_bun_t_alkaline==T] %>% nrow()
+apendx_w_sodium_at_emerg[medi_bun_t_solution==T] %>% nrow()
+apendx_w_sodium_at_emerg[path_bun_t_typing==T] %>% nrow()
+apendx_w_sodium_at_emerg[surg_bun_t_bowel==T] %>% nrow()
+apendx_w_sodium_at_emerg[path_bun_t_antibod==T] %>% nrow()
+apendx_w_sodium_at_emerg[radi_bun_t_mri==T] %>% nrow()
+apendx_w_sodium_at_emerg[faci_bun_t_consultation==T] %>% nrow()
+```
+
+```{r}
+apendx_w_sodium_at_emerg <- apendx_w_sodium_at_emerg[path_bun_t_alkaline==F & path_bun_t_typing==F & surg_bun_t_bowel==F & faci_bun_t_consultation==F ]
+```
+
+examine the median price density and the highly correlated tags
+
+```{r}
+apendx_w_sodium_at_emerg %>% plot_med_density() %>% print()
+apendx_w_sodium_at_emerg %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+apendx_w_sodium_at_emerg_btbv4 <- apendx_w_sodium_at_emerg %>% btbv4()
+```
+
+```{r}
+apendx_w_sodium_at_emerg_bq <- apendx_w_sodium_at_emerg_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs="Surgery"#,
+                                  # specialization_reqs = ""
+                                  ),
+                                                .f=calculate_primary_doctor) %>% as.character()
+                     ] %>%
+  #Filter out any procedures where our doctors fail both criteria.
+  .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS", "NONE_FIT_SPEC_REQ"))] %>%
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %>%
+  .[,`:=`(procedure_type=7, procedure_modifier="At Emergency Department")]
+```
+
+
+
+```{r}
+apendx_w_sodium_at_emerg_bq <- apendx_w_sodium_at_emerg_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac	,
+most_important_fac_npi,
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]
+```
+
+
+```{r, eval=FALSE}
+bq_table_upload(x=procedure_table, values= apendx_w_sodium_at_emerg_bq, create_disposition='CREATE_IF_NEEDED', write_disposition='WRITE_APPEND')
+```
+
+
+
+### not at emergecny department
+```{r}
+apendx_w_sodium_n_emerg <- apendx_w_sodium[faci_bun_t_emergency==F]
+```
+
+examine the median price density and the highly correlated tags
+
+```{r}
+apendx_w_sodium_n_emerg %>% plot_med_density() %>% print()
+apendx_w_sodium_n_emerg %>% get_tag_cor() %>% print()
+```
+
+## appendectomy no sodium injection
+
+
+```{r}
+apendx_n_sodium %>% plot_med_density() %>% print()
+apendx_n_sodium %>% get_tag_cor() %>% print()
+```
+
+```{r}
+apendx_n_sodium[surg_bun_t_bladder==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_gallbladder==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_cystoscopy==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_bowel==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_removal==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_cyst==T] %>% nrow()
+apendx_n_sodium[`surg_bun_t_add-on`==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_pancreas==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_renal==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_pancreas==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_lap==F] %>% nrow()
+apendx_n_sodium[surg_bun_t_fluid==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_imag==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_colon==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_partial==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_ovarian==T] %>% nrow()
+apendx_n_sodium[surg_bun_t_implant==T] %>% nrow()
+```
+
+
+```{r}
+apendx_n_sodium <- apendx_n_sodium[surg_bun_t_bladder==F &
+                   surg_bun_t_gallbladder==F &
+                   surg_bun_t_cystoscopy==F &
+                   surg_bun_t_bowel==F &
+                   surg_bun_t_removal==F &
+                   surg_bun_t_cyst==F &
+                   `surg_bun_t_add-on`==F &
+                   surg_bun_t_pancreas==F &
+                   surg_bun_t_renal==F &
+                   surg_bun_t_pancreas==F &
+                   surg_bun_t_lap==T &
+                   surg_bun_t_fluid==F &
+                   surg_bun_t_imag==F &
+                   surg_bun_t_colon==F &
+                   surg_bun_t_partial==F &
+                   surg_bun_t_partial==F &
+                   surg_bun_t_implant==F
+                   ]
+```
+
+
+
+
+```{r}
+apendx_n_sodium %>% plot_med_density() %>% print()
+apendx_n_sodium %>% get_tag_cor() %>% print()
+```
+
+```{r}
+apendx_n_sodium %>% plot_price_vs_duration() %>% print()
+```
+
+```{r}
+apendx_n_sodium[duration_mean<2] %>% plot_price_vs_duration() %>% print()
+```
+
+
+
+```{r}
+apendx_n_sodium[duration_mean<2] %>% plot_med_density() %>% print()
+apendx_n_sodium[duration_mean<2] %>% get_tag_cor() %>% print()
+```
+
+
+
+```{r}
+apendx_n_sodium <- apendx_n_sodium[duration_mean<2]
+```
+
+
+
+```{r}
+apendx_n_sodium [medi_bun_t_choline==T] %>% nrow()
+```
+
+
+```{r}
+apendx_n_sodium[radi_bun_t_imaging==T] %>% nrow()
+```
+
+
+```{r}
+apendx_n_sodium[medi_bun_t_saline==T] %>% nrow()
+```
+
+
+```{r}
+apendx_n_sodium <- apendx_n_sodium[medi_bun_t_choline==F & radi_bun_t_imaging==F & medi_bun_t_saline==F]
+```
+
+```{r}
+apendx_n_sodium %>% plot_med_density() %>% print()
+apendx_n_sodium %>% get_tag_cor() %>% print()
+```
+
+
+
+```{r}
+apendx_n_sodium[radi_bun_t_echo==T] %>% nrow()
+apendx_n_sodium[radi_bun_t_exam==T] %>% nrow()
+apendx_n_sodium[radi_bun_t_ct==T] %>% nrow()
+
+```
+
+
+```{r}
+apendx_n_sodium_btbv4 <- apendx_n_sodium %>% btbv4()
+```
+
+```{r}
+apendx_n_sodium_bq <- apendx_n_sodium_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs="Surgery"#,
+                                  # specialization_reqs = ""
+                                  ),
+                                                .f=calculate_primary_doctor) %>% as.character()
+                     ] %>%
+  #Filter out any procedures where our doctors fail both criteria.
+  .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS", "NONE_FIT_SPEC_REQ"))] %>%
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %>%
+  .[,`:=`(procedure_type=7, procedure_modifier="Standard")]
+```
+
+
+
+```{r}
+apendx_n_sodium_bq <- apendx_n_sodium_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac	,
+most_important_fac_npi,
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]
+```
+
+
+```{r}
+apendx_n_sodium_bq <- apendx_n_sodium_bq[,
+                            primary_doctor_npi := fifelse(primary_doctor=="ALEXANDER LORENZO COLONNA",
+                                         "1568659324",
+                                         primary_doctor_npi)]
+```
+
+```{r, eval=FALSE}
+bq_table_upload(x=procedure_table, values= apendx_n_sodium_bq, create_disposition='CREATE_IF_NEEDED', write_disposition='WRITE_APPEND')
+```
+

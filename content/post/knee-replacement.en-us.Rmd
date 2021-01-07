@@ -1,0 +1,358 @@
+---
+title: Knee Replacement
+author: Alexander Nielson
+date: '2020-12-30'
+slug: knee-replacement.en-us
+categories:
+  - Major Surgery
+tags:
+  - Knee
+  - Replacement
+keywords:
+  - tech
+---
+
+# Introduction
+
+In this section we will:  
+* identify which Knee Replacement procedures were excluded and why
+* identify which different Knee Replacement subgroups were created and why
+
+
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov) 
+
+
+# Load Libraries
+Load Libraries
+```{r, message=FALSE}
+library(data.table)
+library(tidyverse)
+library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github("utah-osa/hcctools2", upgrade="never" )
+library(hcctools2)
+```
+
+Establish color palettes
+
+```{r}
+cust_color_pal1 <- c(
+        "Anesthesia" = "#f3476f",
+        "Facility" = "#e86a33",
+        "Medicine Proc" = "#e0a426",
+        "Pathology" = "#77bf45",
+        "Radiology" = "#617ff7",
+        "Surgery" = "#a974ee"
+    )
+
+cust_color_pal2 <- c(
+        "TRUE" = "#617ff7",
+        "FALSE" = "#e0a426"
+    )
+
+cust_color_pal3 <- c(
+        "above avg" = "#f3476f",
+        "avg" = "#77bf45",
+        "below avg" = "#a974ee"
+    )
+
+
+
+  fac_ref_regex <- "(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)"
+```
+
+# Connect to GCP database
+```{r}
+bigrquery::bq_auth(path = 'D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json')
+
+# set my project ID and dataset name
+project_id <- 'healthcare-compare-prod'
+dataset_name <- 'healthcare_compare'
+
+con <- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)
+```
+
+
+# Get NPI table
+```{r}
+query <-  paste0("SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`")
+                       
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full <- dbGetQuery(con, query) %>%
+  data.table() 
+```
+
+
+# get a subset of the NPI providers based upon taxonomy groups
+```{r}
+gs4_auth(email="alexnielson@utah.gov")
+```
+
+
+```{r}
+surgery <- read_sheet("https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0",
+                    sheet="major_surgery") %>% as.data.table
+surgery <-  surgery[is.na(Remove) ] %>% .[["NUCC Classification"]]
+```
+
+```{r}
+  npi_prov_pair <-  npi_full[osa_class %in% surgery] %>% 
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ] 
+```
+
+
+# Load Data
+
+```{r}
+bun_proc <-  disk.frame("full_apcd.df")
+```
+
+```{r}
+knee <- bun_proc[surg_bun_t_knee == T & surg_bun_t_arthroplasty==T & surg_bun_sum_med > 2000]
+```
+
+
+```{r}
+knee <- knee[duration_mean >=0]
+```
+
+```{r}
+knee <-  knee[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %>% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %>% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %>% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %>% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %>% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %>% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %>% map_chr(get_npi_standard_name)
+                           )]
+```
+
+```{r}
+knee %>% saveRDS("knee.RDS")
+```
+
+```{r}
+#stop here
+```
+
+```{r}
+knee <-  readRDS("knee.RDS")
+```
+
+We will first look at the distribution and high correlated tags. 
+```{r}
+knee %>% plot_med_density() %>% print()
+knee %>% get_tag_cor() %>% print()
+```
+
+First thing to notice from the distribution is that we have a good chunk of knee surgeries that are under 5k. These are not reasonable estimates for the total knee replacements, and are likely only the surgeon costs (not the facility). 
+
+From the correlation table we can see that the duration is quite influential in the price as is reflected in higher facility costs. 
+
+Anesthesia presence also increases the cost. 
+
+Lets examine the duration vs median price visually:
+
+
+```{r}
+knee %>% plot_price_vs_duration() %>% print()
+```
+
+
+Lets see what happens if we remove any of the lower end prices, that are essentially missing facility costs. The below code will filter out any bundled procedures that have a facility cost under 1000.
+
+```{r}
+knee <-  knee[faci_bun_sum_med > 1000]
+```
+
+
+```{r}
+knee %>% plot_med_density() %>% print()
+knee %>% get_tag_cor() %>% print()
+```
+this looks much better. We still need to filter out non standard bundles, but this is a much mor expected distribution. 
+
+## antibody typing 
+
+a pathology test that includes a antibody typing is higher correlated, so we will examine it
+```{r}
+knee %>% get_tag_density_information("path_bun_t_antibod") %>% print()
+```
+very few knee surgeries like this. It is not typical so they will be exluced from the standard 
+```{r}
+knee <-  knee[path_bun_t_antibod==F]
+```
+
+Once again lets look at the distribution of the knee surgeries with anesthesia and the correlated tags.
+```{r}
+knee %>% plot_med_density() %>% print()
+knee %>% get_tag_cor() %>% print()
+```
+lets check the femur/resect/tumor bundle procs. I think this is rare so lets determine the number of surgeries like this:
+```{r}
+knee[surg_bun_t_femur==T] %>% nrow()
+```
+We can omit this one surgery from the standard. 
+
+```{r}
+knee <-  knee [surg_bun_t_femur==F]
+```
+
+Once again lets look at the distribution of the knee surgeries with anesthesia and the correlated tags.
+```{r}
+knee%>% plot_med_density() %>% print()
+knee %>% get_tag_cor() %>% print()
+```
+
+facility charge with "subsequent hospital care"
+
+```{r}
+knee %>% get_tag_density_information("faci_bun_t_subsequent") %>% print()
+```
+
+
+```{r}
+knee_at_sub_hosp <-  knee [faci_bun_t_subsequent==T]
+knee <- knee[faci_bun_t_subsequent==F]
+```
+
+
+Once again lets look at the distribution of the knee surgeries with anesthesia and the correlated tags.
+```{r}
+knee%>% plot_med_density() %>% print()
+knee %>% get_tag_cor() %>% print()
+```
+
+## Interlaminar Injection 
+```{r}
+knee %>% get_tag_density_information("surg_bun_t_lamina") %>% print()
+```
+there is not enough observations to warrant a separate group, but there is a signficnat difference in the types, so they will be excluded from the standard pool.
+```{r}
+knee <-  knee[surg_bun_t_lamina==F]
+```
+
+Once again lets look at the distribution of the knee surgeries with anesthesia and the correlated tags.
+```{r}
+knee%>% plot_med_density() %>% print()
+knee %>% get_tag_cor() %>% print()
+```
+```{r}
+knee[surg_bun_t_device==T] %>% nrow()
+```
+the number of bundled procedures that have a device removal is too rare.
+
+```{r}
+knee <- knee[surg_bun_t_device==F]
+```
+
+
+Once again lets look at the distribution of the knee surgeries with anesthesia and the correlated tags.
+```{r}
+knee%>% plot_med_density() %>% print()
+knee %>% get_tag_cor() %>% print()
+```
+
+```{r}
+knee[path_bun_t_without_scope==T] %>% nrow()
+knee[surg_bun_t_revise==T] %>% nrow()
+```
+```{r}
+knee <- knee[path_bun_t_without_scope==F & surg_bun_t_revise==F]
+```
+
+Once again lets look at the distribution of the knee surgeries with anesthesia and the correlated tags.
+```{r}
+knee%>% plot_med_density() %>% print()
+knee %>% get_tag_cor() %>% print()
+```
+
+```{r}
+knee %>% get_tag_density_information("radi_bun_t_echo") %>% print()
+```
+
+```{r}
+knee%>% plot_med_density() %>% print()
+knee %>% get_tag_cor() %>% print()
+```
+
+
+
+```{r}
+knee_btbv4 <- knee %>% btbv4()
+```
+
+
+Get primary doctors
+
+
+```{r}
+knee_final_bq <- knee_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs="Orthopaedic Surgery"
+                                  ),
+                                                .f=calculate_primary_doctor) %>% as.character()
+                     ] %>% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS"))] %>% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %>% 
+  .[,`:=`(
+    procedure_type=2,
+    procedure_modifier = "Standard Knee Replacement"
+  )]
+```
+
+
+```{r}
+knee_final_bq <- knee_final_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac	,
+most_important_fac_npi,	
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]
+```
+
+```{r, eval=FALSE}
+bq_table_upload(x=procedure_table, values= knee_final_bq, create_disposition='CREATE_IF_NEEDED', write_disposition='WRITE_APPEND')
+```
+

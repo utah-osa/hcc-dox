@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="generator" content="Hugo 0.74.3 with theme Tranquilpeak 0.4.8-BETA">
+<meta name="author" content="Utah OSA - Health Cost Compare ">
+<meta name="keywords" content="tech">
+<meta name="description" content="IntroductionIn this section we will:* identify which Appendectomy procedures were excluded and why* identify which different Appendectomy subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;## when loading &#39;dplyr&#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )library(hcctools2)Establish color palettes">
+
+
+<meta property="og:description" content="IntroductionIn this section we will:* identify which Appendectomy procedures were excluded and why* identify which different Appendectomy subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;## when loading &#39;dplyr&#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )library(hcctools2)Establish color palettes">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Appendectomy">
+<meta name="twitter:title" content="Appendectomy">
+<meta property="og:url" content="/2020/12/appendectomy.en-us/">
+<meta property="twitter:url" content="/2020/12/appendectomy.en-us/">
+<meta property="og:site_name" content="Health Care Compare Documentation">
+<meta property="og:description" content="IntroductionIn this section we will:* identify which Appendectomy procedures were excluded and why* identify which different Appendectomy subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;## when loading &#39;dplyr&#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )library(hcctools2)Establish color palettes">
+<meta name="twitter:description" content="IntroductionIn this section we will:* identify which Appendectomy procedures were excluded and why* identify which different Appendectomy subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;## when loading &#39;dplyr&#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )library(hcctools2)Establish color palettes">
+<meta property="og:locale" content="en-us">
+
+  
+    <meta property="article:published_time" content="2020-12-31T00:00:00">
+  
+  
+    <meta property="article:modified_time" content="2020-12-31T00:00:00">
+  
+  
+  
+    
+      <meta property="article:section" content="Major Surgery">
+    
+  
+  
+    
+      <meta property="article:tag" content="Appendectomy">
+    
+  
+
+
+<meta name="twitter:card" content="summary">
+
+
+
+
+
+
+
+
+
+
+
+  <meta property="og:image" content="/img/osa-seal.jpg">
+  <meta property="twitter:image" content="/img/osa-seal.jpg">
+
+
+    <title>Appendectomy</title>
+
+    <link rel="icon" href="/favicon.png">
+    
+
+    
+
+    <link rel="canonical" href="/2020/12/appendectomy.en-us/">
+
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha256-eZrrJcwDc/3uDhsdt61sL2oOBY362qM3lon1gyExkL0=" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.css" integrity="sha256-vuXZ9LGmmwtjqFX1F+EKin1ThZMub58gKULUyf0qECk=" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" integrity="sha256-SEa4XYAHihTcEP1f5gARTB2K26Uk8PsndQYHQC1f4jU=" crossorigin="anonymous" />
+    
+    
+    <link rel="stylesheet" href="/css/style-twzjdbqhmnnacqs0pwwdzcdbt8yhv8giawvjqjmyfoqnvazl0dalmnhdkvp7.min.css" />
+    
+    
+
+    
+      
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="4">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Health Care Compare Documentation</a>
+  </div>
+  
+    
+      <a class="header-right-picture "
+         href="/#about">
+    
+    
+    
+      
+        <img class="header-picture" src="/img/osa-seal.jpg" alt="Author&#39;s picture" />
+      
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="4">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="/img/osa-seal.jpg" alt="Author&#39;s picture" />
+        </a>
+        <h4 class="sidebar-profile-name">Utah OSA - Health Cost Compare </h4>
+        
+          <h5 class="sidebar-profile-bio">Documentation for Office of the State Auditor&rsquo;s methodology in contstructing the Health Care Compare Tool</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+      
+      <span class="sidebar-button-desc">Home</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+      
+      <span class="sidebar-button-desc">Tags</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/#about">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/utah-osa/hcc-website">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+
+    </ul>
+  </div>
+</nav>
+
+      
+
+      <div id="main" data-behavior="4"
+        class="
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Appendectomy
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2020-12-31T00:00:00Z">
+        
+  December 31, 2020
+
+      </time>
+    
+    
+  
+  
+    <span>in</span>
+    
+      <a class="category-link" href="/categories/major-surgery">Major Surgery</a>
+    
+  
+
+  </div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              
+<script src="/rmarkdown-libs/jquery/jquery.min.js"></script>
+<script src="/rmarkdown-libs/elevate-section-attrs/elevate-section-attrs.js"></script>
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In this section we will:
+* identify which Appendectomy procedures were excluded and why
+* identify which different Appendectomy subgroups were created and why</p>
+<p>If you have questions or concerns about this data please contact Alexander Nielson (<a href="mailto:alexnielson@utah.gov" class="email">alexnielson@utah.gov</a>)</p>
+</div>
+<div id="load-libraries" class="section level1">
+<h1>Load Libraries</h1>
+<p>Load Libraries</p>
+<pre class="r"><code>library(data.table)
+library(tidyverse)</code></pre>
+<pre><code>## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;
+## when loading &#39;dplyr&#39;</code></pre>
+<pre class="r"><code>library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )
+library(hcctools2)</code></pre>
+<p>Establish color palettes</p>
+<pre class="r"><code>cust_color_pal1 &lt;- c(
+        &quot;Anesthesia&quot; = &quot;#f3476f&quot;,
+        &quot;Facility&quot; = &quot;#e86a33&quot;,
+        &quot;Medicine Proc&quot; = &quot;#e0a426&quot;,
+        &quot;Pathology&quot; = &quot;#77bf45&quot;,
+        &quot;Radiology&quot; = &quot;#617ff7&quot;,
+        &quot;Surgery&quot; = &quot;#a974ee&quot;
+    )
+
+cust_color_pal2 &lt;- c(
+        &quot;TRUE&quot; = &quot;#617ff7&quot;,
+        &quot;FALSE&quot; = &quot;#e0a426&quot;
+    )
+
+cust_color_pal3 &lt;- c(
+        &quot;above avg&quot; = &quot;#f3476f&quot;,
+        &quot;avg&quot; = &quot;#77bf45&quot;,
+        &quot;below avg&quot; = &quot;#a974ee&quot;
+    )
+
+
+
+  fac_ref_regex &lt;- &quot;(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)&quot;</code></pre>
+</div>
+<div id="connect-to-gcp-database" class="section level1">
+<h1>Connect to GCP database</h1>
+<pre class="r"><code>bigrquery::bq_auth(path = &#39;D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json&#39;)
+
+# set my project ID and dataset name
+project_id &lt;- &#39;healthcare-compare-prod&#39;
+dataset_name &lt;- &#39;healthcare_compare&#39;
+
+con &lt;- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)</code></pre>
+</div>
+<div id="get-npi-table" class="section level1">
+<h1>Get NPI table</h1>
+<pre class="r"><code>query &lt;-  paste0(&quot;SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`&quot;)
+
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full &lt;- dbGetQuery(con, query) %&gt;%
+  data.table()</code></pre>
+</div>
+<div id="get-a-subset-of-the-npi-providers-based-upon-taxonomy-groups" class="section level1">
+<h1>get a subset of the NPI providers based upon taxonomy groups</h1>
+<pre class="r"><code>gs4_auth(email=&quot;alexnielson@utah.gov&quot;)</code></pre>
+<pre class="r"><code>surgery &lt;- read_sheet(&quot;https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0&quot;,
+                    sheet=&quot;major_surgery&quot;) %&gt;% as.data.table</code></pre>
+<pre><code>## Reading from &quot;Doctor Types to Keep&quot;</code></pre>
+<pre><code>## Range &quot;&#39;major_surgery&#39;&quot;</code></pre>
+<pre class="r"><code>surgery &lt;-  surgery[is.na(Remove) ] %&gt;% .[[&quot;NUCC Classification&quot;]]</code></pre>
+<pre class="r"><code>  npi_prov_pair &lt;-  npi_full[osa_class %in% surgery] %&gt;%
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ]</code></pre>
+</div>
+<div id="load-data" class="section level1">
+<h1>Load Data</h1>
+<pre class="r"><code>bun_proc &lt;-  disk.frame(&quot;full_apcd.df&quot;)</code></pre>
+<pre class="r"><code>apendx &lt;- bun_proc[surg_bun_t_appendectomy==T]</code></pre>
+<pre class="r"><code>apendx &lt;-  apendx[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %&gt;% map_chr(get_npi_standard_name),
+
+  medi_sp_name_clean = medi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+
+  radi_sp_name_clean = radi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+
+  path_sp_name_clean = path_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %&gt;% map_chr(get_npi_standard_name),
+
+  anes_sp_name_clean = anes_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %&gt;% map_chr(get_npi_standard_name),
+
+  faci_sp_name_clean = faci_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %&gt;% map_chr(get_npi_standard_name)
+  )]</code></pre>
+<pre class="r"><code>apendx %&gt;% saveRDS(&quot;apendx.RDS&quot;)</code></pre>
+<pre class="r"><code>apendx &lt;- readRDS(&quot;apendx.RDS&quot;)</code></pre>
+<p>examine appendectomy median price distribution and get the highly correlated tags</p>
+<pre class="r"><code>apendx %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+<pre class="r"><code>apendx %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 304 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 surg_bun_t_lung            0.686
+##  2 surg_bun_t_percut          0.686
+##  3 medi_bun_t_establish       0.686
+##  4 medi_bun_t_eye_exam        0.686
+##  5 radi_bun_t_ct_scan         0.686
+##  6 radi_bun_t_head            0.686
+##  7 radi_bun_t_scan            0.686
+##  8 radi_bun_t_brain           0.664
+##  9 duration_max               0.656
+## 10 surg_bun_t_pancreas        0.587
+## # ... with 294 more rows</code></pre>
+<pre class="r"><code>apendx[surg_bun_t_lung==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>apendx[radi_bun_t_brain==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre class="r"><code>apendx[cnt &gt; 4 &amp; faci_bun_sum_med &gt; 1000 &amp; surg_bun_t_lung==F &amp; radi_bun_t_brain==F] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 826</code></pre>
+<pre class="r"><code>apendx[cnt &gt; 4 &amp; faci_bun_sum_med &gt; 1000 &amp; surg_bun_t_lung==F &amp; radi_bun_t_brain==F] %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<pre class="r"><code>apendx[cnt &gt; 4 &amp; faci_bun_sum_med &gt; 1000 &amp; surg_bun_t_lung==F &amp; radi_bun_t_brain==F] %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 281 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 duration_mean                0.615
+##  2 duration_max                 0.594
+##  3 medi_bun_t_sodium            0.402
+##  4 medi_bun_t_inject            0.393
+##  5 surg_bun_t_gallbladder       0.324
+##  6 surg_bun_t_removal           0.321
+##  7 faci_bun_t_hospital          0.318
+##  8 medi_bun_t_cathet            0.308
+##  9 surg_bun_t_bladder           0.288
+## 10 surg_bun_t_lap               0.280
+## # ... with 271 more rows</code></pre>
+<pre class="r"><code>apendx &lt;- apendx[cnt &gt; 4 &amp; faci_bun_sum_med &gt; 1000 &amp; surg_bun_t_lung==F &amp; radi_bun_t_brain==F]</code></pre>
+<pre class="r"><code>apendx %&gt;% get_tag_density_information(&quot;medi_bun_t_sodium&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ medi_bun_t_sodium&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1430</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-18-2.png" width="672" /></p>
+<pre class="r"><code>apendx_w_sodium &lt;- apendx[medi_bun_t_sodium == T &amp; medi_bun_t_inject == T]
+apendx_n_sodium &lt;- apendx[medi_bun_t_sodium == F &amp; medi_bun_t_inject == F]</code></pre>
+<div id="appendectomy-with-sodium-injection" class="section level2">
+<h2>appendectomy with sodium injection</h2>
+<p>-usually antibiotics or anesthesia</p>
+<p>examine the median price density and the highly correlated tags</p>
+<pre class="r"><code>apendx_w_sodium %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-20-1.png" width="672" /></p>
+<pre class="r"><code>apendx_w_sodium %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 211 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 medi_bun_t_cathet         0.381
+##  2 medi_bun_t_flu            0.381
+##  3 medi_bun_t_wound          0.381
+##  4 path_bun_t_embryo         0.381
+##  5 duration_max              0.368
+##  6 surg_bun_t_removal        0.344
+##  7 duration_mean             0.343
+##  8 path_bun_t_anti           0.320
+##  9 faci_bun_t_critical       0.314
+## 10 path_bun_t_blood          0.273
+## # ... with 201 more rows</code></pre>
+<pre class="r"><code>apendx_w_sodium[medi_bun_t_flu==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>apendx_w_sodium[surg_bun_t_removal==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre class="r"><code>apendx_w_sodium[faci_bun_t_critical==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre class="r"><code>apendx_w_sodium[path_bun_t_immuno==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre class="r"><code>apendx_w_sodium &lt;- apendx_w_sodium[medi_bun_t_flu==F&amp; surg_bun_t_removal==F &amp; faci_bun_t_critical==F &amp; path_bun_t_immuno==F ]</code></pre>
+<p>examine the median price density and the highly correlated tags</p>
+<pre class="r"><code>apendx_w_sodium %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-23-1.png" width="672" /></p>
+<pre class="r"><code>apendx_w_sodium %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 197 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 faci_bun_t_dept               0.321
+##  2 faci_bun_t_emergency          0.321
+##  3 medi_bun_t_puncture           0.275
+##  4 medi_bun_t_routine            0.275
+##  5 medi_bun_t_venipuncture       0.275
+##  6 duration_max                  0.258
+##  7 faci_bun_t_visit              0.235
+##  8 medi_bun_t_observ             0.234
+##  9 radi_bun_t_contrast           0.232
+## 10 path_bun_t_comprehen          0.229
+## # ... with 187 more rows</code></pre>
+<pre class="r"><code>apendx_w_sodium %&gt;% get_tag_density_information(&quot;faci_bun_t_emergency&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ faci_bun_t_emergency&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 969</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-24-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-24-2.png" width="672" /></p>
+<div id="at-emergency-department" class="section level3">
+<h3>at emergency department</h3>
+<pre class="r"><code>apendx_w_sodium_at_emerg &lt;- apendx_w_sodium[faci_bun_t_emergency==T]</code></pre>
+<p>examine the median price density and the highly correlated tags</p>
+<pre class="r"><code>apendx_w_sodium_at_emerg %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-26-1.png" width="672" /></p>
+<pre class="r"><code>apendx_w_sodium_at_emerg %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 140 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 medi_bun_t_observ             0.321
+##  2 medi_bun_t_puncture           0.299
+##  3 medi_bun_t_routine            0.299
+##  4 medi_bun_t_venipuncture       0.299
+##  5 duration_max                  0.274
+##  6 duration_mean                 0.228
+##  7 path_bun_t_alkaline           0.226
+##  8 path_bun_t_amino              0.226
+##  9 path_bun_t_phosphatase        0.226
+## 10 medi_bun_t_solution           0.203
+## # ... with 130 more rows</code></pre>
+<pre class="r"><code>apendx_w_sodium_at_emerg[path_bun_t_alkaline==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>apendx_w_sodium_at_emerg[medi_bun_t_solution==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 23</code></pre>
+<pre class="r"><code>apendx_w_sodium_at_emerg[path_bun_t_typing==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre class="r"><code>apendx_w_sodium_at_emerg[surg_bun_t_bowel==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>apendx_w_sodium_at_emerg[path_bun_t_antibod==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre class="r"><code>apendx_w_sodium_at_emerg[radi_bun_t_mri==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre class="r"><code>apendx_w_sodium_at_emerg[faci_bun_t_consultation==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre class="r"><code>apendx_w_sodium_at_emerg &lt;- apendx_w_sodium_at_emerg[path_bun_t_alkaline==F &amp; path_bun_t_typing==F &amp; surg_bun_t_bowel==F &amp; faci_bun_t_consultation==F ]</code></pre>
+<p>examine the median price density and the highly correlated tags</p>
+<pre class="r"><code>apendx_w_sodium_at_emerg %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-29-1.png" width="672" /></p>
+<pre class="r"><code>apendx_w_sodium_at_emerg %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 130 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 duration_max                  0.324
+##  2 medi_bun_t_observ             0.288
+##  3 duration_mean                 0.273
+##  4 medi_bun_t_puncture           0.258
+##  5 medi_bun_t_routine            0.258
+##  6 medi_bun_t_venipuncture       0.258
+##  7 radi_bun_t_mri                0.207
+##  8 radi_bun_t_without_dye        0.207
+##  9 radi_bun_t_ct                 0.199
+## 10 radi_bun_t_contrast           0.193
+## # ... with 120 more rows</code></pre>
+<pre class="r"><code>apendx_w_sodium_at_emerg_btbv4 &lt;- apendx_w_sodium_at_emerg %&gt;% btbv4()</code></pre>
+<pre class="r"><code>apendx_w_sodium_at_emerg_bq &lt;- apendx_w_sodium_at_emerg_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs=&quot;Surgery&quot;#,
+                                  # specialization_reqs = &quot;&quot;
+                                  ),
+                                                .f=calculate_primary_doctor) %&gt;% as.character()
+                     ] %&gt;%
+  #Filter out any procedures where our doctors fail both criteria.
+  .[!(primary_doctor %in% c(&quot;BOTH_DOC_FAIL_CRIT&quot;, &quot;TWO_FIT_ALL_SPECS&quot;, &quot;NONE_FIT_SPEC_REQ&quot;))] %&gt;%
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %&gt;%
+  .[,`:=`(procedure_type=7, procedure_modifier=&quot;At Emergency Department&quot;)]</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;BRAD A MYERS&quot;     &quot;DARRELL L WILSON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;REBECKA L MEYERS&quot;    &quot;ERIC RICHARD SCAIFE&quot;</code></pre>
+<pre class="r"><code>apendx_w_sodium_at_emerg_bq &lt;- apendx_w_sodium_at_emerg_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac  ,
+most_important_fac_npi,
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]</code></pre>
+<pre class="r"><code>bq_table_upload(x=procedure_table, values= apendx_w_sodium_at_emerg_bq, create_disposition=&#39;CREATE_IF_NEEDED&#39;, write_disposition=&#39;WRITE_APPEND&#39;)</code></pre>
+</div>
+<div id="not-at-emergecny-department" class="section level3">
+<h3>not at emergecny department</h3>
+<pre class="r"><code>apendx_w_sodium_n_emerg &lt;- apendx_w_sodium[faci_bun_t_emergency==F]</code></pre>
+<p>examine the median price density and the highly correlated tags</p>
+<pre class="r"><code>apendx_w_sodium_n_emerg %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-35-1.png" width="672" /></p>
+<pre class="r"><code>apendx_w_sodium_n_emerg %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 145 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 path_bun_t_typing        0.373
+##  2 path_bun_t_screen        0.343
+##  3 path_bun_t_anti          0.322
+##  4 path_bun_t_antibod       0.322
+##  5 path_bun_t_blood         0.303
+##  6 surg_bun_t_remov         0.288
+##  7 surg_bun_t_remove        0.288
+##  8 surg_bun_t_excise        0.264
+##  9 surg_bun_t_lesion        0.264
+## 10 surg_bun_t_exc           0.243
+## # ... with 135 more rows</code></pre>
+</div>
+</div>
+<div id="appendectomy-no-sodium-injection" class="section level2">
+<h2>appendectomy no sodium injection</h2>
+<pre class="r"><code>apendx_n_sodium %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-36-1.png" width="672" /></p>
+<pre class="r"><code>apendx_n_sodium %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 205 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 duration_mean                0.591
+##  2 duration_max                 0.56 
+##  3 surg_bun_t_bladder           0.370
+##  4 surg_bun_t_gallbladder       0.370
+##  5 surg_bun_t_cysto             0.368
+##  6 surg_bun_t_cystoscopy        0.368
+##  7 surg_bun_t_treat             0.368
+##  8 surg_bun_t_removal           0.322
+##  9 surg_bun_t_cyst              0.316
+## 10 surg_bun_t_add-on            0.312
+## # ... with 195 more rows</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_bladder==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_gallbladder==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_cystoscopy==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_bowel==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_removal==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_cyst==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre class="r"><code>apendx_n_sodium[`surg_bun_t_add-on`==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 13</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_pancreas==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_renal==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_pancreas==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_lap==F] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 19</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_fluid==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_imag==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_colon==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_partial==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_ovarian==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre class="r"><code>apendx_n_sodium[surg_bun_t_implant==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre class="r"><code>apendx_n_sodium &lt;- apendx_n_sodium[surg_bun_t_bladder==F &amp;
+                   surg_bun_t_gallbladder==F &amp;
+                   surg_bun_t_cystoscopy==F &amp;
+                   surg_bun_t_bowel==F &amp;
+                   surg_bun_t_removal==F &amp;
+                   surg_bun_t_cyst==F &amp;
+                   `surg_bun_t_add-on`==F &amp;
+                   surg_bun_t_pancreas==F &amp;
+                   surg_bun_t_renal==F &amp;
+                   surg_bun_t_pancreas==F &amp;
+                   surg_bun_t_lap==T &amp;
+                   surg_bun_t_fluid==F &amp;
+                   surg_bun_t_imag==F &amp;
+                   surg_bun_t_colon==F &amp;
+                   surg_bun_t_partial==F &amp;
+                   surg_bun_t_partial==F &amp;
+                   surg_bun_t_implant==F
+                   ]</code></pre>
+<pre class="r"><code>apendx_n_sodium %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-39-1.png" width="672" /></p>
+<pre class="r"><code>apendx_n_sodium %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 130 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 duration_mean             0.558
+##  2 duration_max              0.481
+##  3 medi_bun_t_choline        0.174
+##  4 radi_bun_t_with_dye       0.153
+##  5 radi_bun_t_ct             0.140
+##  6 radi_bun_t_echo           0.139
+##  7 faci_bun_t_care           0.128
+##  8 radi_bun_t_imag           0.113
+##  9 radi_bun_t_imaging        0.113
+## 10 radi_bun_t_mri            0.113
+## # ... with 120 more rows</code></pre>
+<pre class="r"><code>apendx_n_sodium %&gt;% plot_price_vs_duration() %&gt;% print()</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-40-1.png" width="672" /></p>
+<pre class="r"><code>apendx_n_sodium[duration_mean&lt;2] %&gt;% plot_price_vs_duration() %&gt;% print()</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-41-1.png" width="672" /></p>
+<pre class="r"><code>apendx_n_sodium[duration_mean&lt;2] %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-42-1.png" width="672" /></p>
+<pre class="r"><code>apendx_n_sodium[duration_mean&lt;2] %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 125 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 medi_bun_t_choline           0.275
+##  2 duration_max                 0.269
+##  3 duration_mean                0.241
+##  4 radi_bun_t_echo              0.200
+##  5 radi_bun_t_imag              0.183
+##  6 radi_bun_t_imaging           0.183
+##  7 radi_bun_t_mri               0.183
+##  8 radi_bun_t_without_dye       0.183
+##  9 anes_bun_t_mod_sed           0.183
+## 10 radi_bun_t_exam              0.182
+## # ... with 115 more rows</code></pre>
+<pre class="r"><code>apendx_n_sodium &lt;- apendx_n_sodium[duration_mean&lt;2]</code></pre>
+<pre class="r"><code>apendx_n_sodium [medi_bun_t_choline==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>apendx_n_sodium[radi_bun_t_imaging==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>apendx_n_sodium[medi_bun_t_saline==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre class="r"><code>apendx_n_sodium &lt;- apendx_n_sodium[medi_bun_t_choline==F &amp; radi_bun_t_imaging==F &amp; medi_bun_t_saline==F]</code></pre>
+<pre class="r"><code>apendx_n_sodium %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/appendectomy.en-us_files/figure-html/unnamed-chunk-48-1.png" width="672" /></p>
+<pre class="r"><code>apendx_n_sodium %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 116 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 duration_max              0.281
+##  2 duration_mean             0.245
+##  3 radi_bun_t_echo           0.188
+##  4 radi_bun_t_ct             0.181
+##  5 radi_bun_t_contrast       0.173
+##  6 radi_bun_t_exam           0.164
+##  7 radi_bun_t_abdom          0.153
+##  8 faci_bun_t_est            0.135
+##  9 surg_bun_t_dev            0.129
+## 10 surg_bun_t_device         0.129
+## # ... with 106 more rows</code></pre>
+<pre class="r"><code>apendx_n_sodium[radi_bun_t_echo==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 106</code></pre>
+<pre class="r"><code>apendx_n_sodium[radi_bun_t_exam==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 128</code></pre>
+<pre class="r"><code>apendx_n_sodium[radi_bun_t_ct==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 174</code></pre>
+<pre class="r"><code>apendx_n_sodium_btbv4 &lt;- apendx_n_sodium %&gt;% btbv4()</code></pre>
+<pre class="r"><code>apendx_n_sodium_bq &lt;- apendx_n_sodium_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs=&quot;Surgery&quot;#,
+                                  # specialization_reqs = &quot;&quot;
+                                  ),
+                                                .f=calculate_primary_doctor) %&gt;% as.character()
+                     ] %&gt;%
+  #Filter out any procedures where our doctors fail both criteria.
+  .[!(primary_doctor %in% c(&quot;BOTH_DOC_FAIL_CRIT&quot;, &quot;TWO_FIT_ALL_SPECS&quot;, &quot;NONE_FIT_SPEC_REQ&quot;))] %&gt;%
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %&gt;%
+  .[,`:=`(procedure_type=7, procedure_modifier=&quot;Standard&quot;)]</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;KELLY D NOLAN&quot;       &quot;MARK RYAN MAWHINNEY&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID E SKARDA&quot;      &quot;BRIAN THOMAS BUCHER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MILDA  SHAPIRO&quot;     &quot;WILLIAM NOEL PEUGH&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ROBERT SHELDON PRICE&quot; &quot;NICKOLAS RAY BYRGE&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;STEPHEN JOSEPH FENTON&quot; &quot;DOUGLAS C BARNHART&quot;</code></pre>
+<pre class="r"><code>apendx_n_sodium_bq &lt;- apendx_n_sodium_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac  ,
+most_important_fac_npi,
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]</code></pre>
+<pre class="r"><code>apendx_n_sodium_bq &lt;- apendx_n_sodium_bq[,
+                            primary_doctor_npi := fifelse(primary_doctor==&quot;ALEXANDER LORENZO COLONNA&quot;,
+                                         &quot;1568659324&quot;,
+                                         primary_doctor_npi)]</code></pre>
+<pre class="r"><code>bq_table_upload(x=procedure_table, values= apendx_n_sodium_bq, create_disposition=&#39;CREATE_IF_NEEDED&#39;, write_disposition=&#39;WRITE_APPEND&#39;)</code></pre>
+</div>
+</div>
+
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small">TAGGED IN</span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="/tags/appendectomy/">Appendectomy</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  
+      <nav >
+        <ul class="post-actions post-action-nav">
+          
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--disabled">
+              
+                  <i class="fa fa-angle-left"></i>
+                  <span class="hide-xs hide-sm text-small icon-ml">NEXT</span>
+                </a>
+            </li>
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="/2020/12/birth.en-us/" data-tooltip="Birth">
+              
+                  <span class="hide-xs hide-sm text-small icon-mr">PREVIOUS</span>
+                  <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+          
+        </ul>
+      </nav>
+    <ul class="post-actions post-action-share" >
+      
+        <li class="post-action hide-lg hide-md hide-sm">
+          <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+            <i class="fa fa-share-alt"></i>
+          </a>
+        </li>
+        
+      
+      
+        <li class="post-action">
+          <a class="post-action-btn btn btn--default" href="#disqus_thread">
+            <i class="fa fa-comment-o"></i>
+          </a>
+        </li>
+      
+      <li class="post-action">
+        
+          <a class="post-action-btn btn btn--default" href="#">
+        
+          <i class="fa fa-list"></i>
+        </a>
+      </li>
+    </ul>
+  
+</div>
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2021 Utah OSA - Health Cost Compare . All Rights Reserved
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+        <div class="post-actions-wrap">
+  
+      <nav >
+        <ul class="post-actions post-action-nav">
+          
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--disabled">
+              
+                  <i class="fa fa-angle-left"></i>
+                  <span class="hide-xs hide-sm text-small icon-ml">NEXT</span>
+                </a>
+            </li>
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="/2020/12/birth.en-us/" data-tooltip="Birth">
+              
+                  <span class="hide-xs hide-sm text-small icon-mr">PREVIOUS</span>
+                  <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+          
+        </ul>
+      </nav>
+    <ul class="post-actions post-action-share" >
+      
+        <li class="post-action hide-lg hide-md hide-sm">
+          <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+            <i class="fa fa-share-alt"></i>
+          </a>
+        </li>
+        
+      
+      
+        <li class="post-action">
+          <a class="post-action-btn btn btn--default" href="#disqus_thread">
+            <i class="fa fa-comment-o"></i>
+          </a>
+        </li>
+      
+      <li class="post-action">
+        
+          <a class="post-action-btn btn btn--default" href="#">
+        
+          <i class="fa fa-list"></i>
+        </a>
+      </li>
+    </ul>
+  
+</div>
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+  <i id="btn-close-shareoptions" class="fa fa-close"></i>
+  <ul class="share-options">
+    
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="/img/osa-seal.jpg" alt="Author&#39;s picture" />
+    
+    <h4 id="about-card-name">Utah OSA - Health Cost Compare </h4>
+    
+      <div id="about-card-bio">Documentation for Office of the State Auditor&rsquo;s methodology in contstructing the Health Care Compare Tool</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Performance Audit Team
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        SLC, Utah
+      </div>
+    
+  </div>
+</div>
+
+    
+
+    
+  
+    
+      <div id="cover" style="background-image:url('/images/cover.jpg');"></div>
+    
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
+
+
+<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+
+
+<script lang="javascript">
+window.onload = updateMinWidth;
+window.onresize = updateMinWidth;
+document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
+function updateMinWidth() {
+  var sidebar = document.getElementById("sidebar");
+  var main = document.getElementById("main");
+  main.style.minWidth = "";
+  var w1 = getComputedStyle(main).getPropertyValue("min-width");
+  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
+  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
+  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
+}
+</script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = '\/2020\/12\/appendectomy.en-us\/';
+          
+            this.page.identifier = '\/2020\/12\/appendectomy.en-us\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'hugo-tranquilpeak-theme';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+    
+  </body>
+</html>
+

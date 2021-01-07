@@ -1,0 +1,412 @@
+---
+title: Hysterectomy
+author: Alexander Nielson
+date: '2020-12-31'
+slug: hysterectomy.en-us
+categories:
+  - Major Surgery
+tags:
+  - Hysterectomy
+  - Hyster
+  - Ectomy
+  - OBGYN
+keywords:
+  - tech
+---
+
+
+# Introduction
+
+In this section we will:
+* identify which Hysterectomy procedures were excluded and why
+* identify which different Hysterectomy Repair subgroups were created and why
+
+
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+
+
+# Load Libraries
+Load Libraries
+```{r, message=FALSE}
+library(data.table)
+library(tidyverse)
+library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github("utah-osa/hcctools2", upgrade="never" )
+library(hcctools2)
+```
+
+Establish color palettes
+
+```{r}
+cust_color_pal1 <- c(
+        "Anesthesia" = "#f3476f",
+        "Facility" = "#e86a33",
+        "Medicine Proc" = "#e0a426",
+        "Pathology" = "#77bf45",
+        "Radiology" = "#617ff7",
+        "Surgery" = "#a974ee"
+    )
+
+cust_color_pal2 <- c(
+        "TRUE" = "#617ff7",
+        "FALSE" = "#e0a426"
+    )
+
+cust_color_pal3 <- c(
+        "above avg" = "#f3476f",
+        "avg" = "#77bf45",
+        "below avg" = "#a974ee"
+    )
+
+
+
+  fac_ref_regex <- "(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)"
+```
+
+# Connect to GCP database
+```{r}
+bigrquery::bq_auth(path = 'D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json')
+
+# set my project ID and dataset name
+project_id <- 'healthcare-compare-prod'
+dataset_name <- 'healthcare_compare'
+
+con <- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)
+```
+
+
+# Get NPI table
+```{r}
+query <-  paste0("SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`")
+
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full <- dbGetQuery(con, query) %>%
+  data.table()
+```
+
+
+# get a subset of the NPI providers based upon taxonomy groups
+```{r}
+gs4_auth(email="alexnielson@utah.gov")
+```
+
+
+```{r}
+surgery <- read_sheet("https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0",
+                    sheet="major_surgery") %>% as.data.table
+surgery <-  surgery[is.na(Remove) ] %>% .[["NUCC Classification"]]
+```
+
+```{r}
+  npi_prov_pair <-  npi_full[osa_class %in% surgery] %>%
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ]
+```
+
+
+# Load Data
+
+```{r}
+bun_proc <-  disk.frame("full_apcd.df")
+```
+
+
+```{r}
+hyst <- bun_proc[surg_bun_t_hysterectomy==T & cnt >2 & faci_bun_sum_med > 500]
+```
+
+
+```{r}
+hyst <-  hyst[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %>% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %>% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %>% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %>% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %>% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %>% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %>% map_chr(get_npi_standard_name)
+  )]
+```
+
+```{r}
+hyst %>% saveRDS(paste0("hysterectomy", Sys.Date(),".RDS"))
+```
+
+
+
+```{r}
+hyst %>% plot_med_density() %>% print()
+hyst %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+hyst %>% plot_price_vs_duration() %>% print()
+```
+
+
+```{r}
+hyst %>% get_tag_density_information("anes_bun_t_upper") %>% print()
+```
+
+```{r}
+hyst <- hyst[anes_bun_t_upper==F]
+```
+
+```{r}
+hyst %>% plot_med_density() %>% print()
+hyst %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+hyst <- hyst[duration_mean<3]
+hyst %>% plot_med_density() %>% print()
+hyst %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+hyst %>% get_tag_density_information("anes_bun_t_deliver") %>% print()
+```
+
+
+```{r}
+hyst <- hyst[anes_bun_t_deliver==F]
+```
+
+
+```{r}
+hyst %>% plot_med_density() %>% print()
+hyst %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hyst %>% get_tag_density_information("anes_bun_t_bladder") %>% print()
+```
+
+```{r}
+hyst <- hyst[anes_bun_t_bladder==F]
+```
+
+```{r}
+hyst %>% plot_med_density() %>% print()
+hyst %>% get_tag_cor() %>% print()
+```
+
+
+## hyst_vag
+
+```{r}
+hyst_vag <- hyst[surg_bun_t_vag == T]
+```
+
+
+```{r}
+hyst_vag %>% plot_med_density() %>% print()
+hyst_vag %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hyst_vag[surg_bun_t_coloproctostomy==T] %>% nrow()
+```
+
+```{r}
+hyst_vag[surg_bun_t_bladder==T] %>% nrow()
+```
+
+```{r}
+hyst_vag <- hyst_vag[surg_bun_t_coloproctostomy==F & surg_bun_t_bladder==F]
+```
+
+```{r}
+hyst_vag %>% plot_med_density() %>% print()
+hyst_vag %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hyst_vag %>% get_tag_density_information("path_bun_t_without_scope") %>% print()
+```
+
+```{r}
+hyst_vag <- hyst_vag[path_bun_t_without_scope==F]
+```
+
+```{r}
+hyst_vag %>% get_tag_density_information("anes_bun_t_hysterectomy") %>% print()
+```
+
+
+
+```{r}
+hyst_vag_btbv4 <- hyst_vag %>% btbv4()
+```
+
+
+```{r}
+hyst_vag_bq <- hyst_vag_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs="Obstetrics & Gynecology"
+                                  ),
+                                                .f=calculate_primary_doctor) %>% as.character()
+                     ] %>% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS"))] %>% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %>% 
+  .[,`:=`(
+    procedure_type=4,
+    procedure_modifier = "Vaginal Hysterectomy"
+  )]
+```
+
+
+```{r}
+hyst_vag_bq <- hyst_vag_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac	,
+most_important_fac_npi,	
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]
+```
+
+```{r, eval=FALSE}
+bq_table_upload(x=procedure_table, values= hyst_vag_bq, create_disposition='CREATE_IF_NEEDED', write_disposition='WRITE_APPEND')
+```
+
+
+
+
+## hyst_total 
+
+```{r}
+hyst_total <- hyst[surg_bun_t_total == T]
+```
+
+```{r}
+hyst_total %>% plot_med_density() %>% print()
+hyst_total %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hyst_total %>% get_tag_density_information("path_bun_t_tumor") %>% print()
+```
+
+
+```{r}
+hyst_total <- hyst_total[surg_bun_t_colon==F & surg_bun_t_partial==F & path_bun_t_tumor==F & surg_bun_t_renal==F ]
+```
+
+
+```{r}
+hyst_total %>% plot_med_density() %>% print()
+hyst_total %>% get_tag_cor() %>% print()
+```
+
+```{r}
+# hyst_total %>% get_tag_density_information("surg_bun_t_complex") %>% print()
+```
+
+```{r}
+hyst_total %>% get_tag_density_information("surg_bun_t_remove") %>% print()
+```
+
+```{r}
+hyst_total <- hyst_total[surg_bun_t_remove==F & surg_bun_t_complex==F & surg_bun_t_drain==F & surg_bun_t_skin==F ]
+```
+
+
+
+```{r}
+hyst_total %>% plot_med_density() %>% print()
+hyst_total %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+hyst_total_btbv4 <- hyst_total %>% btbv4()
+```
+
+
+```{r}
+hyst_total_bq <- hyst_total_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs="Obstetrics & Gynecology"
+                                  ),
+                                                .f=calculate_primary_doctor) %>% as.character()
+                     ] %>% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS"))] %>% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %>% 
+  .[,`:=`(
+    procedure_type=4,
+    procedure_modifier = "Total Hysterectomy"
+  )]
+```
+
+
+```{r}
+hyst_total_bq <- hyst_total_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac	,
+most_important_fac_npi,	
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]
+```
+
+
+```{r, eval=F}
+bq_table_upload(x=procedure_table, values= hyst_total_bq, create_disposition='CREATE_IF_NEEDED', write_disposition='WRITE_APPEND')
+```
+

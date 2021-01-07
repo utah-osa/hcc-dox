@@ -1,0 +1,777 @@
+---
+title: Colonoscopy
+author: Alexander Nielson
+date: '2020-07-31'
+slug: colonoscopy
+categories:
+  - Major Surgery
+tags:
+  - Colonoscopy
+  - Biopsy
+  - Surgery
+keywords:
+  - tech
+---
+
+# Introduction
+
+In this section we will:  
+* identify which colonoscopy procedures were excluded and why
+* identify which different colonoscopy subgroups were created and why
+
+
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov) 
+
+
+# Load Libraries
+Load Libraries
+```{r, message=FALSE}
+library(data.table)
+library(tidyverse)
+library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github("utah-osa/hcctools2", upgrade="never" )
+library(hcctools2)
+```
+
+Establish color palettes
+
+```{r}
+cust_color_pal1 <- c(
+        "Anesthesia" = "#f3476f",
+        "Facility" = "#e86a33",
+        "Medicine Proc" = "#e0a426",
+        "Pathology" = "#77bf45",
+        "Radiology" = "#617ff7",
+        "Surgery" = "#a974ee"
+    )
+
+cust_color_pal2 <- c(
+        "TRUE" = "#617ff7",
+        "FALSE" = "#e0a426"
+    )
+
+cust_color_pal3 <- c(
+        "above avg" = "#f3476f",
+        "avg" = "#77bf45",
+        "below avg" = "#a974ee"
+    )
+
+
+
+  fac_ref_regex <- "(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)"
+```
+
+# Connect to GCP database
+```{r}
+bigrquery::bq_auth(path = 'D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json')
+
+# set my project ID and dataset name
+project_id <- 'healthcare-compare-prod'
+dataset_name <- 'healthcare_compare'
+
+con <- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)
+```
+
+
+# Get NPI table
+```{r}
+query <-  paste0("SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`")
+                       
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full <- dbGetQuery(con, query) %>%
+  data.table() 
+```
+
+
+# get a subset of the NPI providers based upon taxonomy groups
+```{r}
+gs4_auth(email="alexnielson@utah.gov")
+```
+
+
+```{r}
+surgery <- read_sheet("https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0",
+                    sheet="major_surgery") %>% as.data.table
+surgery <-  surgery[is.na(Remove) ] %>% .[["NUCC Classification"]]
+```
+
+```{r}
+  npi_prov_pair <-  npi_full[osa_class %in% surgery] %>% 
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ] 
+```
+
+
+# Load Data
+
+```{r}
+bun_proc <-  disk.frame("full_apcd.df")
+```
+
+
+
+```{r}
+cscopy <- bun_proc[surg_bun_t_colonoscopy == T & cnt >5 & tp_med < 10000]
+```
+
+
+```{r}
+cscopy <-  cscopy[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %>% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %>% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %>% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %>% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %>% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %>% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %>% map_chr(get_npi_standard_name)
+                           )]
+```
+
+
+```{r}
+cscopy %>% saveRDS("cscopy.RDS")
+```
+
+```{r}
+cscopy <- readRDS("cscopy.RDS")
+```
+
+
+anything under 600 is  known to be too low. while some clinics may perform colonoscopies at a lower rate, a 600 dolar charge is not typical. 
+
+```{r}
+cscopy <- cscopy[tp_med > 600 & tp_med < 10000]
+```
+
+
+```{r}
+cscopy[,tp_med] %>% summary()
+```
+
+## A. Standard
+
+We want to find the typical/standard colonoscopy. To do this we need to split and filter out the procedures that we would not typically think as a standard colonoscopy. These groups may be valid and deserve their own category, or they may be rare procedure types which we do not believe the average customer is shopping for. 
+
+
+```{r}
+cscopy %>% plot_med_density() %>% print()
+cscopy %>% get_tag_cor() %>% print()
+```
+
+lets compare the procedures which have an EGD and a colonoscopy
+
+```{r}
+cscopy %>% get_tag_density_information(tag="surg_bun_t_egd") %>% print()
+```
+
+these are clearly different. If a patient has an EGD and a colonoscopy, they are being charged much more than if there was no EGD. 
+
+
+```{r}
+cscopy_with_egd <- cscopy[surg_bun_t_egd ==T]
+cscopy <- cscopy[surg_bun_t_egd ==F]
+```
+
+Lets now once again examine the distribution and examine any correlated tags
+
+```{r}
+cscopy %>% plot_med_density() %>% print()
+cscopy %>% get_tag_cor() %>% print()
+```
+
+now lets examine the colonoscopies with lesion removal 
+```{r}
+cscopy %>% get_tag_density_information(tag="surg_bun_t_lesion") %>% print()
+```
+There is strong evidence to remove split these procedures into separate groups. While the Doctor and/or patient may not know if a lesion will be removed prior to surgery, there is a price difference. This will help with post procedure customer analyis. 
+
+```{r}
+cscopy_with_lesion <- cscopy[surg_bun_t_lesion ==T]
+cscopy <- cscopy[surg_bun_t_lesion ==F]
+```
+
+check distribution and correlated tags
+```{r}
+cscopy %>% plot_med_density() %>% print()
+cscopy %>% get_tag_cor() %>% print()
+```
+
+```{r}
+cscopy %>% get_tag_density_information("medi_bun_t_inject") %>% print()
+```
+
+weak evidence to split based on injection, so for now we will not split. Lets check the tissue pathology next
+
+
+
+```{r}
+cscopy %>% get_tag_density_information(tag="path_bun_t_tissue") %>% print()
+```
+
+There is strong evidence to split based upon whether a tissue pathology was conducted. This also passes a gut check since if a tissue had a pathology procedure that it would have cost more to the patient. 
+
+```{r}
+cscopy_with_tissue<- cscopy[path_bun_t_tissue ==T]
+cscopy <- cscopy[path_bun_t_tissue ==F]
+```
+
+
+```{r}
+cscopy %>% plot_med_density() %>% print()
+cscopy %>% get_tag_cor() %>% print()
+```
+
+lets check for colonoscopies at the emergency department
+
+```{r}
+cscopy %>% get_tag_density_information(tag="faci_bun_t_emergency") %>% print()
+```
+There is strong evidence that a colonoscopy at the emergency department costs much more than one not at an emergency department, however the frequency is not high, so it will not be a serparate searchable category. 
+
+```{r}
+cscopy_at_emerg <-  cscopy[faci_bun_t_emergency==T]
+cscopy <-  cscopy[faci_bun_t_emergency==F]
+```
+
+
+
+```{r}
+cscopy %>% plot_med_density() %>% print()
+cscopy %>% get_tag_cor() %>% print()
+```
+lets remove some obviously non standard additional procedures
+```{r}
+cscopy <- cscopy[surg_bun_t_anal==F & surg_bun_t_finger==F & anes_bun_t_hernia==F & surg_bun_t_pharynx==F & surg_bun_t_hernia ==F & surg_bun_t_anal==F & surg_bun_t_lap==F ]
+```
+
+
+```{r}
+cscopy %>% plot_med_density() %>% print()
+```
+We are now happy with this distribution and values for the standard colonoscopy. 
+Now we will group the bundles by the facility, and doctor pairs based upon the NPI database. 
+```{r}
+cscopy_btbv4 <-  cscopy %>% btbv4()
+```
+
+For colonoscopies, we will only show those which performed at least 25 surgeries. 
+```{r}
+cscopy_btbv4 <- cscopy_btbv4 %>% 
+ arrange(most_important_fac) %>% 
+  filter(tp_cnt_cnt>9) %>%
+  select(doctor_str1,
+         doctor_str2,
+         doctor_npi_str1,
+         doctor_npi_str2,
+         most_important_fac,
+         most_important_fac_npi,
+         tp_med_med,
+         tp_med_surg,
+         tp_med_medi,
+         tp_med_path,
+         tp_med_radi,
+         tp_med_anes,
+         tp_med_faci,
+         tp_cnt_cnt) %>%
+  mutate(procedure_type = 1,
+         procedure_modifier = "Standard")
+
+```
+
+```{r}
+cscopy_btbv4 %>% as.data.frame()%>% count(doctor_str1,doctor_str2, most_important_fac) %>% filter(n>1)
+```
+
+
+## B. EGD 
+
+```{r}
+cscopy_with_egd %>% plot_med_density() %>% print()
+```
+
+
+```{r}
+cscopy_with_egd %>% get_tag_cor() %>% print()
+```
+
+```{r}
+cscopy_with_egd %>% get_tag_density_information("medi_bun_t_sodium") %>% print()
+```
+
+```{r}
+cscopy_with_edg_with_sodium <-  cscopy_with_egd[medi_bun_t_sodium==T]
+cscopy_with_egd <- cscopy_with_egd[medi_bun_t_sodium==F]
+```
+
+```{r}
+cscopy_with_egd %>% get_tag_cor() %>% print()
+```
+
+## C. Lesion Removal 
+We will now break down the Colonoscopy with Lesion Removal Category down into appropriate categories. 
+
+lets check the dist and correlated tags
+```{r}
+cscopy_with_lesion %>% plot_med_density() %>% print()
+cscopy_with_lesion %>% get_tag_cor() %>% print()
+```
+
+
+
+```{r}
+cscopy_with_lesion %>% get_tag_density_information("medi_bun_t_inject") %>% print()
+```
+we have strong evidence to create a new group for cscopy with a lesion removal with an injection.
+
+
+```{r}
+cscopy_with_lesion_with_injection <- cscopy_with_lesion[medi_bun_t_inject==T]
+cscopy_with_lesion <-  cscopy_with_lesion[medi_bun_t_inject==F]
+```
+
+
+lets check the dist and correlated tags
+```{r}
+cscopy_with_lesion %>% plot_med_density() %>% print()
+cscopy_with_lesion %>% get_tag_cor() %>% print()
+```
+
+```{r}
+cscopy_with_lesion %>% get_tag_density_information("surg_bun_t_biopsy") %>% print()
+```
+There is strong evidence that a lesion removal with a biopsy should be a separate procedure.
+
+
+```{r}
+cscopy_with_lesion_and_biopsy <- cscopy_with_lesion[surg_bun_t_biopsy==T]
+cscopy_with_lesion <-  cscopy_with_lesion[surg_bun_t_biopsy==F]
+```
+
+lets check the dist and correlated tags
+```{r}
+cscopy_with_lesion %>% plot_med_density() %>% print()
+cscopy_with_lesion %>% get_tag_cor() %>% print()
+```
+
+the njx tag is picking up is "Egd us transmural injxn/mark" or "Colonoscopy submucous njx"
+
+```{r}
+cscopy_with_lesion %>% get_tag_density_information("surg_bun_t_sub") %>% print()
+```
+while there is a legitimate difference, it is not a large enough sample to warrant a separate procedure options
+
+```{r}
+cscopy_with_lesion <-  cscopy_with_lesion[surg_bun_t_sub==F]
+```
+
+lets check the dist and correlated tags
+```{r}
+cscopy_with_lesion %>% plot_med_density() %>% print()
+cscopy_with_lesion %>% get_tag_cor() %>% print()
+```
+
+```{r}
+cscopy_with_lesion %>% get_tag_density_information("faci_bun_t_emergency") %>% print()
+```
+not a large enough sample to warrant a split. 
+
+```{r}
+cscopy_with_lesion <- cscopy_with_lesion[faci_bun_t_emergency==F]
+```
+
+lets check the dist and correlated tags
+```{r}
+cscopy_with_lesion %>% plot_med_density() %>% print()
+cscopy_with_lesion %>% get_tag_cor() %>% print()
+```
+
+```{r}
+cscopy_with_lesion <- cscopy_with_lesion[surg_bun_t_sheath==F & surg_bun_t_block==F & surg_bun_t_eye==F & surg_bun_t_cystoscopy==F]
+```
+
+
+```{r}
+cscopy_with_lesion  %>% get_tag_density_information("path_bun_t_patho") %>% print()
+```
+Not justified to split
+
+lets check the dist and correlated tags
+```{r}
+cscopy_with_lesion %>% plot_med_density() %>% print()
+cscopy_with_lesion %>% get_tag_cor() %>% print()
+```
+
+```{r}
+cscopy_with_lesion_btbv4 <- cscopy_with_lesion %>% btbv4()
+```
+
+```{r}
+cscopy_with_lesion_btbv4 <- cscopy_with_lesion_btbv4 %>% 
+  filter(tp_cnt_cnt>5) %>% 
+  select(doctor_str1,
+         doctor_str2,
+         doctor_npi_str1,
+         doctor_npi_str2,
+         most_important_fac,
+         most_important_fac_npi,
+         tp_med_med,
+         tp_med_surg,
+         tp_med_medi,
+         tp_med_path,
+         tp_med_radi,
+         tp_med_anes,
+         tp_med_faci,
+         tp_cnt_cnt) %>%
+  mutate(procedure_type = 1,
+         procedure_modifier = "Lesion Removal")
+
+cscopy_with_lesion_btbv4
+```
+
+### 1. injection
+lets break down the lesion removal with an injection
+```{r}
+cscopy_with_lesion_with_injection %>% get_tag_cor() %>% print()
+cscopy_with_lesion_with_injection %>% plot_med_density() %>% print()
+```
+
+```{r}
+cscopy_with_lesion_with_injection %>% get_tag_density_information("surg_bun_t_sub") %>% print()
+```
+
+```{r}
+cscopy_with_lesion_with_injection <-  cscopy_with_lesion_with_injection[surg_bun_t_sub==F]
+```
+
+```{r}
+cscopy_with_lesion_with_injection %>% get_tag_density_information("surg_bun_t_biopsy") %>% print()
+```
+
+```{r}
+cscopy_with_lesion_biopsy_injection <- cscopy_with_lesion_with_injection[surg_bun_t_biopsy==T]
+cscopy_with_lesion_with_injection <- cscopy_with_lesion_with_injection[surg_bun_t_biopsy==F]
+```
+
+
+```{r}
+cscopy_with_lesion_with_injection %>%  get_tag_cor() %>% print()
+```
+
+
+```{r}
+cscopy_with_lesion_with_injection %>% get_tag_density_information("surg_bun_t_remove") %>% print()
+```
+
+```{r}
+cscopy_with_lesion_with_injection <- cscopy_with_lesion_with_injection[surg_bun_t_resect==F & surg_bun_t_remove==F & medi_bun_t_normal==F ]
+```
+
+
+```{r}
+cscopy_with_lesion_with_injection %>% plot_med_density() %>% print()
+```
+
+```{r}
+cscopy_with_lesion_with_injection_bundle <-  cscopy_with_lesion_with_injection %>% btbv4()
+```
+
+```{r}
+# cscopy_with_lesion_with_injection_bundle %>% View()
+```
+
+```{r}
+# cscopy_with_lesion_with_injection_bundle %>% saveRDS("dash_colonoscopy_lesion_injection.RDS")
+```
+
+
+### 2. biopsy
+```{r}
+cscopy_with_lesion_and_biopsy %>% get_tag_cor() %>% print()
+cscopy_with_lesion_and_biopsy %>% plot_med_density() %>% print()
+```
+
+
+```{r}
+cscopy_with_lesion_and_biopsy %>% get_tag_density_information("surg_bun_t_njx") %>% print()
+```
+
+```{r}
+cscopy_with_lesion_and_biopsy <- cscopy_with_lesion_and_biopsy[surg_bun_t_njx==F & surg_bun_t_sub==F]
+```
+
+
+```{r}
+cscopy_with_lesion_and_biopsy %>% get_tag_density_information("path_bun_t_patho") %>% print()
+```
+
+
+```{r}
+cscopy_with_lesion_and_biopsy <-  cscopy_with_lesion_and_biopsy[path_bun_t_patho==T]
+```
+
+```{r}
+cscopy_with_lesion_and_biopsy <- cscopy_with_lesion_and_biopsy[path_bun_t_metabolic==F & faci_bun_t_emergency==F]
+```
+
+
+```{r}
+cscopy_with_lesion_and_biopsy %>% get_tag_cor() %>% print()
+cscopy_with_lesion_and_biopsy %>% plot_med_density() %>% print()
+```
+
+```{r}
+cscopy_with_lesion_and_biopsy %>% get_tag_density_information("anes_bun_t_mod_sed") %>% print()
+```
+there is strong evidence to split those groups into two. 
+
+```{r}
+cscopy_with_lesion_and_biopsy_and_mod_sed <-  cscopy_with_lesion_and_biopsy[anes_bun_t_mod_sed==T]
+cscopy_with_lesion_and_biopsy <- cscopy_with_lesion_and_biopsy[anes_bun_t_mod_sed==F]
+```
+
+lets check the dist and correlated tags
+```{r}
+cscopy_with_lesion_and_biopsy %>% get_tag_cor() %>% print()
+cscopy_with_lesion_and_biopsy %>% plot_med_density() %>% print()
+```
+
+```{r}
+cscopy_with_lesion_and_biopsy <-  cscopy_with_lesion_and_biopsy[surg_bun_t_resect==F & path_bun_t_immuno==F & path_bun_t_hormone==F & path_bun_t_sex==F & surg_bun_t_breast==F]
+```
+
+
+```{r}
+cscopy_with_lesion_and_biopsy2 <- cscopy_with_lesion_and_biopsy
+```
+
+
+```{r}
+cscopy_with_lesion_and_biopsy_btbv4 <- cscopy_with_lesion_and_biopsy %>% btbv4()
+```
+
+```{r}
+cscopy_with_lesion_and_biopsy_btbv4 <- cscopy_with_lesion_and_biopsy_btbv4 %>% 
+  filter(tp_cnt_cnt>5) %>%
+  arrange(most_important_fac) %>% 
+  select(doctor_str1,
+         doctor_str2,
+         doctor_npi_str1,
+         doctor_npi_str2,
+         most_important_fac,
+         most_important_fac_npi,
+         tp_med_med,
+         tp_med_surg,
+         tp_med_medi,
+         tp_med_path,
+         tp_med_radi,
+         tp_med_anes,
+         tp_med_faci,
+         tp_cnt_cnt) %>% 
+  mutate(procedure_type = 1,
+         procedure_modifier = "Lesion Removal AND Biopsy")
+cscopy_with_lesion_and_biopsy_btbv4
+```
+
+
+
+### 3. Even more break downs.
+While these are valid break downs, they seems to complex for the average customer to shop for, so I am going to display them, but they will not be in the final tool.
+
+```{r}
+cscopy_with_lesion_biopsy_injection %>% get_tag_cor() %>% print()
+cscopy_with_lesion_biopsy_injection %>% plot_med_density() %>% print()
+```
+
+```{r}
+cscopy_with_lesion_biopsy_injection %>% get_tag_density_information("anes_bun_t_mod_sed") %>% print()
+```
+```{r}
+cscopy_with_lesion_biopsy_injection <-  cscopy_with_lesion_biopsy_injection[surg_bun_t_resect==F] 
+```
+
+
+```{r}
+cscopy_with_lesion_biopsy_injection_mod_sed <-  cscopy_with_lesion_biopsy_injection[anes_bun_t_mod_sed==T]
+
+cscopy_with_lesion_biopsy_injection <- cscopy_with_lesion_biopsy_injection[anes_bun_t_mod_sed==F]
+```
+
+```{r}
+cscopy_with_lesion_biopsy_injection %>% get_tag_cor() %>% print()
+cscopy_with_lesion_biopsy_injection %>% plot_med_density() %>% print()
+```
+
+```{r}
+cscopy_with_lesion_biopsy_injection_mod_sed %>% get_tag_cor() %>% print()
+cscopy_with_lesion_biopsy_injection_mod_sed %>% plot_med_density() %>% print()
+```
+
+## D. Tissue pathology
+I will now break down the Colonoscopy with a tissue pathology
+
+lets look at the distribution and correlated tags
+```{r}
+cscopy_with_tissue %>% plot_med_density() %>% print()
+cscopy_with_tissue %>% get_tag_cor() %>% print()
+```
+
+```{r}
+cscopy_with_tissue %>% get_tag_density_information("anes_bun_t_anesth") %>% print()
+```
+valid split, but not a large enough grouping to warrant own category. 
+
+```{r}
+cscopy_with_tissue  <- cscopy_with_tissue[anes_bun_t_anesth == F]
+```
+
+lets look at the distribution and correlated tags
+```{r}
+cscopy_with_tissue %>% plot_med_density() %>% print()
+cscopy_with_tissue %>% get_tag_cor() %>% print()
+```
+
+```{r}
+cscopy_with_tissue %>% get_tag_density_information("anes_bun_t_mod_sed") %>% print()
+```
+
+```{r}
+cscopy_with_tissue_with_mod_sed <-  cscopy_with_tissue[anes_bun_t_mod_sed == T]
+cscopy_with_tissue <- cscopy_with_tissue[anes_bun_t_mod_sed == F]
+```
+
+
+```{r}
+cscopy_with_tissue %>% plot_med_density() %>% print()
+cscopy_with_tissue %>% get_tag_cor() %>% print()
+```
+
+```{r}
+cscopy_with_tissue %>% get_tag_density_information("faci_bun_t_hospital") %>% print()
+```
+```{r}
+cscopy_with_tissue <-  cscopy_with_tissue[faci_bun_t_initial==F & medi_bun_t_normal==F & faci_bun_t_discharge==F & faci_bun_t_emergency==F & faci_bun_t_hospital==F & medi_bun_t_sodium==F & surg_bun_t_resect==F & path_bun_t_panel==F & surg_bun_t_anal==F & surg_bun_t_destroy==F & medi_bun_t_wheezing==F & surg_bun_t_nasal == F & path_bun_t_hiv==F & path_bun_t_allerg==F & path_bun_t_pregnancy==F & surg_bun_t_dilat==F]
+```
+
+```{r}
+cscopy_with_tissue %>% plot_med_density() %>% print()
+cscopy_with_tissue %>% get_tag_cor() %>% print()
+```
+
+```{r}
+cscopy_with_tissue_btbv4 <- cscopy_with_tissue %>% btbv4()
+```
+
+```{r}
+cscopy_with_tissue_btbv4 <- cscopy_with_tissue_btbv4 %>% 
+  filter(tp_cnt_cnt>5) %>%
+  arrange(most_important_fac) %>% 
+  select(doctor_str1,
+         doctor_str2,
+         doctor_npi_str1,
+         doctor_npi_str2,
+         most_important_fac,
+         most_important_fac_npi,
+         tp_med_med,
+         tp_med_surg,
+         tp_med_medi,
+         tp_med_path,
+         tp_med_radi,
+         tp_med_anes,
+         tp_med_faci,
+         tp_cnt_cnt) %>% 
+  mutate(procedure_type = 1,
+         procedure_modifier = "Tissue Pathology")
+cscopy_with_tissue_btbv4
+```
+
+
+```{r}
+cscopy_final <- cscopy_btbv4 %>%
+  rbind(cscopy_with_lesion_btbv4) %>%
+  rbind(cscopy_with_lesion_and_biopsy_btbv4) %>% 
+  rbind(cscopy_with_tissue_btbv4)
+```
+
+
+
+```{r}
+cscopy_final %>% saveRDS("cscopy_final.RDS")
+```
+
+
+```{r}
+cscopy_final %>% nrow()
+cscopy_final %>% count(doctor_str2) %>% arrange(desc(n))
+```
+946 bundles.
+71 rows
+
+
+
+
+
+```{r}
+cscopy_final_bq <- cscopy_final[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs="Internal Medicine|||Colon & Rectal Surgery",
+                                  specialization_reqs="Gastroenterology"),
+                                                .f=calculate_primary_doctor) %>% as.character()
+                     ] %>% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS", "NONE_FIT_SPEC_REQ"))] %>% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)]
+```
+
+
+```{r}
+cscopy_final_bq <-  cscopy_final_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac	,
+most_important_fac_npi,	
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]
+```
+
+
+```{r, eval=FALSE}
+bq_table_upload(x=procedure_table, values= cscopy_final_bq, create_disposition='CREATE_IF_NEEDED', write_disposition='WRITE_APPEND')
+```

@@ -1,0 +1,344 @@
+---
+title: Hip Replacement
+author: Alexander Nielson
+date: '2020-12-30'
+slug: hip-replacement.en-us
+categories:
+  - Major Surgery
+tags:
+  - Hip
+  - Replace
+keywords:
+  - tech
+---
+
+
+# Introduction
+
+In this section we will:  
+* identify which Hip Replacement procedures were excluded and why
+* identify which different Hip Replacement subgroups were created and why
+
+
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov) 
+
+
+# Load Libraries
+Load Libraries
+```{r, message=FALSE}
+library(data.table)
+library(tidyverse)
+library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github("utah-osa/hcctools2", upgrade="never" )
+library(hcctools2)
+```
+
+Establish color palettes
+
+```{r}
+cust_color_pal1 <- c(
+        "Anesthesia" = "#f3476f",
+        "Facility" = "#e86a33",
+        "Medicine Proc" = "#e0a426",
+        "Pathology" = "#77bf45",
+        "Radiology" = "#617ff7",
+        "Surgery" = "#a974ee"
+    )
+
+cust_color_pal2 <- c(
+        "TRUE" = "#617ff7",
+        "FALSE" = "#e0a426"
+    )
+
+cust_color_pal3 <- c(
+        "above avg" = "#f3476f",
+        "avg" = "#77bf45",
+        "below avg" = "#a974ee"
+    )
+
+
+
+  fac_ref_regex <- "(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)"
+```
+
+# Connect to GCP database
+```{r}
+bigrquery::bq_auth(path = 'D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json')
+
+# set my project ID and dataset name
+project_id <- 'healthcare-compare-prod'
+dataset_name <- 'healthcare_compare'
+
+con <- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)
+```
+
+
+# Get NPI table
+```{r}
+query <-  paste0("SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`")
+                       
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full <- dbGetQuery(con, query) %>%
+  data.table() 
+```
+
+
+# get a subset of the NPI providers based upon taxonomy groups
+```{r}
+gs4_auth(email="alexnielson@utah.gov")
+```
+
+
+```{r}
+surgery <- read_sheet("https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0",
+                    sheet="major_surgery") %>% as.data.table
+surgery <-  surgery[is.na(Remove) ] %>% .[["NUCC Classification"]]
+```
+
+```{r}
+  npi_prov_pair <-  npi_full[osa_class %in% surgery] %>% 
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ] 
+```
+
+
+# Load Data
+
+```{r}
+bun_proc <-  disk.frame("full_apcd.df")
+```
+
+
+```{r}
+hip <- bun_proc[surg_bun_t_hip==T & surg_bun_t_arthro==T]
+```
+
+```{r}
+hip <-  hip[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %>% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %>% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %>% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %>% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %>% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %>% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %>% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %>% map_chr(get_npi_standard_name)
+  )]
+```
+
+
+```{r}
+hip %>% plot_med_density() %>% print()
+hip %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+hip %>% get_tag_density_information("surg_bun_t_arthroplasty") %>% print()
+```
+
+
+```{r}
+hip_total <- hip[surg_bun_t_arthroplasty==T & cnt>2 & faci_bun_sum_med > 500]
+hip_scopy <- hip[surg_bun_t_arthroplasty==F]
+```
+
+## work on total hip arhtroplasties first
+
+once again check price density and correlated tags
+```{r}
+hip_total %>% plot_med_density() %>% print()
+hip_total %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hip_total %>% get_tag_density_information("radi_bun_t_without_dye") %>% print()
+```
+
+```{r}
+hip_total <- hip_total[radi_bun_t_without_dye==F]
+```
+
+
+once again check price density and correlated tags
+```{r}
+hip_total %>% plot_med_density() %>% print()
+hip_total %>% get_tag_cor() %>% print()
+```
+
+
+
+```{r}
+# hip_total %>% get_tag_density_information("surg_bun_t_resect") %>% print()
+hip_total[surg_bun_t_resect ==T] %>% nrow()
+```
+
+there is only one with this so we will omit
+
+
+```{r}
+hip_total <- hip_total[surg_bun_t_resect==F]
+```
+
+
+once again check price density and correlated tags
+```{r}
+hip_total %>% plot_med_density() %>% print()
+hip_total %>% get_tag_cor() %>% print()
+```
+
+
+```{r}
+hip_total %>% get_tag_density_information("surg_bun_t_pelvis") %>% print()
+```
+
+There are only two, so they do not need to be their own option in the tool. 
+
+```{r}
+hip_total <- hip_total[surg_bun_t_pelvis==F]
+```
+
+
+once again check price density and correlated tags
+```{r}
+hip_total %>% plot_med_density() %>% print()
+hip_total %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hip_total %>% get_tag_density_information("anes_bun_t_anes") %>% print()
+```
+
+I am really only interested in the proceduers which included anesthesia costs for the total hip replacement. 
+
+```{r}
+hip_total <- hip_total[anes_bun_t_anes == T]
+```
+
+
+once again check price density and correlated tags
+```{r}
+hip_total %>% plot_med_density() %>% print()
+hip_total %>% get_tag_cor() %>% print()
+```
+
+```{r}
+hip_total %>% get_tag_density_information("anes_bun_t_repair") %>% print()
+```
+
+```{r}
+hip_total <- hip_total[anes_bun_t_repair==F]
+```
+
+
+once again check price density and correlated tags
+```{r}
+hip_total %>% plot_med_density() %>% print()
+hip_total %>% get_tag_cor() %>% print()
+```
+
+```{r}
+# hip_total %>% get_tag_density_information("path_bun_t_thyroid") %>% print()
+hip_total[path_bun_t_thyroid==T] %>% nrow()
+```
+
+only one so we will omit it.
+
+```{r}
+hip_total <- hip_total[path_bun_t_thyroid==F]
+```
+
+
+once again check price density and correlated tags
+```{r}
+hip_total %>% plot_med_density() %>% print()
+hip_total %>% get_tag_cor() %>% print()
+```
+
+```{r}
+# hip_total %>% get_tag_density_information("faci_bun_t_consultation") %>% print()
+hip_total[faci_bun_t_consultation==T] %>% nrow()
+```
+
+```{r}
+hip_total  <- hip_total[faci_bun_t_consultation==F]
+```
+
+
+once again check price density and correlated tags
+```{r}
+hip_total %>% plot_med_density() %>% print()
+hip_total %>% get_tag_cor() %>% print()
+```
+
+
+
+```{r}
+hip_total_btbv4 <- hip_total %>% btbv4()
+```
+
+```{r}
+hip_total_bq <- hip_total_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs="Orthopaedic Surgery"
+                                  ),
+                                                .f=calculate_primary_doctor) %>% as.character()
+                     ] %>% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c("BOTH_DOC_FAIL_CRIT", "TWO_FIT_ALL_SPECS"))] %>% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %>% 
+  .[,`:=`(procedure_type=3, procedure_modifier="Total Hip Replacement")]
+```
+
+
+
+```{r}
+hip_total_bq <- hip_total_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac	,
+most_important_fac_npi,	
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci
+)]
+```
+
+
+```{r, eval=FALSE}
+bq_table_upload(x=procedure_table, values= hip_total_bq, create_disposition='CREATE_IF_NEEDED', write_disposition='WRITE_APPEND')
+```

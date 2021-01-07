@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="generator" content="Hugo 0.74.3 with theme Tranquilpeak 0.4.8-BETA">
+<meta name="author" content="Utah OSA - Health Cost Compare ">
+<meta name="keywords" content="tech">
+<meta name="description" content="IntroductionIn this section we will:
+* identify which Hip Replacement procedures were excluded and why* identify which different Hip Replacement subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;## when loading &#39;dplyr&#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )library(hcctools2)Establish color palettes">
+
+
+<meta property="og:description" content="IntroductionIn this section we will:
+* identify which Hip Replacement procedures were excluded and why* identify which different Hip Replacement subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;## when loading &#39;dplyr&#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )library(hcctools2)Establish color palettes">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hip Replacement">
+<meta name="twitter:title" content="Hip Replacement">
+<meta property="og:url" content="/2020/12/hip-replacement.en-us/">
+<meta property="twitter:url" content="/2020/12/hip-replacement.en-us/">
+<meta property="og:site_name" content="Health Care Compare Documentation">
+<meta property="og:description" content="IntroductionIn this section we will:
+* identify which Hip Replacement procedures were excluded and why* identify which different Hip Replacement subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;## when loading &#39;dplyr&#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )library(hcctools2)Establish color palettes">
+<meta name="twitter:description" content="IntroductionIn this section we will:
+* identify which Hip Replacement procedures were excluded and why* identify which different Hip Replacement subgroups were created and why
+If you have questions or concerns about this data please contact Alexander Nielson (alexnielson@utah.gov)
+Load LibrariesLoad Libraries
+library(data.table)library(tidyverse)## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;## when loading &#39;dplyr&#39;library(stringi)library(ggridges)library(broom)library(disk.frame)library(RecordLinkage)library(googlesheets4)library(bigrquery)library(DBI)devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )library(hcctools2)Establish color palettes">
+<meta property="og:locale" content="en-us">
+
+  
+    <meta property="article:published_time" content="2020-12-30T00:00:00">
+  
+  
+    <meta property="article:modified_time" content="2020-12-30T00:00:00">
+  
+  
+  
+    
+      <meta property="article:section" content="Major Surgery">
+    
+  
+  
+    
+      <meta property="article:tag" content="Hip">
+    
+      <meta property="article:tag" content="Replace">
+    
+  
+
+
+<meta name="twitter:card" content="summary">
+
+
+
+
+
+
+
+
+
+
+
+  <meta property="og:image" content="/img/osa-seal.jpg">
+  <meta property="twitter:image" content="/img/osa-seal.jpg">
+
+
+    <title>Hip Replacement</title>
+
+    <link rel="icon" href="/favicon.png">
+    
+
+    
+
+    <link rel="canonical" href="/2020/12/hip-replacement.en-us/">
+
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha256-eZrrJcwDc/3uDhsdt61sL2oOBY362qM3lon1gyExkL0=" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.css" integrity="sha256-vuXZ9LGmmwtjqFX1F+EKin1ThZMub58gKULUyf0qECk=" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" integrity="sha256-SEa4XYAHihTcEP1f5gARTB2K26Uk8PsndQYHQC1f4jU=" crossorigin="anonymous" />
+    
+    
+    <link rel="stylesheet" href="/css/style-twzjdbqhmnnacqs0pwwdzcdbt8yhv8giawvjqjmyfoqnvazl0dalmnhdkvp7.min.css" />
+    
+    
+
+    
+      
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="4">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Health Care Compare Documentation</a>
+  </div>
+  
+    
+      <a class="header-right-picture "
+         href="/#about">
+    
+    
+    
+      
+        <img class="header-picture" src="/img/osa-seal.jpg" alt="Author&#39;s picture" />
+      
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="4">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="/img/osa-seal.jpg" alt="Author&#39;s picture" />
+        </a>
+        <h4 class="sidebar-profile-name">Utah OSA - Health Cost Compare </h4>
+        
+          <h5 class="sidebar-profile-bio">Documentation for Office of the State Auditor&rsquo;s methodology in contstructing the Health Care Compare Tool</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+      
+      <span class="sidebar-button-desc">Home</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+      
+      <span class="sidebar-button-desc">Tags</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/#about">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/utah-osa/hcc-website">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+
+    </ul>
+  </div>
+</nav>
+
+      
+
+      <div id="main" data-behavior="4"
+        class="
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Hip Replacement
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2020-12-30T00:00:00Z">
+        
+  December 30, 2020
+
+      </time>
+    
+    
+  
+  
+    <span>in</span>
+    
+      <a class="category-link" href="/categories/major-surgery">Major Surgery</a>
+    
+  
+
+  </div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              
+<script src="/rmarkdown-libs/jquery/jquery.min.js"></script>
+<script src="/rmarkdown-libs/elevate-section-attrs/elevate-section-attrs.js"></script>
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In this section we will:<br />
+* identify which Hip Replacement procedures were excluded and why
+* identify which different Hip Replacement subgroups were created and why</p>
+<p>If you have questions or concerns about this data please contact Alexander Nielson (<a href="mailto:alexnielson@utah.gov" class="email">alexnielson@utah.gov</a>)</p>
+</div>
+<div id="load-libraries" class="section level1">
+<h1>Load Libraries</h1>
+<p>Load Libraries</p>
+<pre class="r"><code>library(data.table)
+library(tidyverse)</code></pre>
+<pre><code>## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;
+## when loading &#39;dplyr&#39;</code></pre>
+<pre class="r"><code>library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )
+library(hcctools2)</code></pre>
+<p>Establish color palettes</p>
+<pre class="r"><code>cust_color_pal1 &lt;- c(
+        &quot;Anesthesia&quot; = &quot;#f3476f&quot;,
+        &quot;Facility&quot; = &quot;#e86a33&quot;,
+        &quot;Medicine Proc&quot; = &quot;#e0a426&quot;,
+        &quot;Pathology&quot; = &quot;#77bf45&quot;,
+        &quot;Radiology&quot; = &quot;#617ff7&quot;,
+        &quot;Surgery&quot; = &quot;#a974ee&quot;
+    )
+
+cust_color_pal2 &lt;- c(
+        &quot;TRUE&quot; = &quot;#617ff7&quot;,
+        &quot;FALSE&quot; = &quot;#e0a426&quot;
+    )
+
+cust_color_pal3 &lt;- c(
+        &quot;above avg&quot; = &quot;#f3476f&quot;,
+        &quot;avg&quot; = &quot;#77bf45&quot;,
+        &quot;below avg&quot; = &quot;#a974ee&quot;
+    )
+
+
+
+  fac_ref_regex &lt;- &quot;(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)&quot;</code></pre>
+</div>
+<div id="connect-to-gcp-database" class="section level1">
+<h1>Connect to GCP database</h1>
+<pre class="r"><code>bigrquery::bq_auth(path = &#39;D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json&#39;)
+
+# set my project ID and dataset name
+project_id &lt;- &#39;healthcare-compare-prod&#39;
+dataset_name &lt;- &#39;healthcare_compare&#39;
+
+con &lt;- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)</code></pre>
+</div>
+<div id="get-npi-table" class="section level1">
+<h1>Get NPI table</h1>
+<pre class="r"><code>query &lt;-  paste0(&quot;SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`&quot;)
+                       
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full &lt;- dbGetQuery(con, query) %&gt;%
+  data.table() </code></pre>
+</div>
+<div id="get-a-subset-of-the-npi-providers-based-upon-taxonomy-groups" class="section level1">
+<h1>get a subset of the NPI providers based upon taxonomy groups</h1>
+<pre class="r"><code>gs4_auth(email=&quot;alexnielson@utah.gov&quot;)</code></pre>
+<pre class="r"><code>surgery &lt;- read_sheet(&quot;https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0&quot;,
+                    sheet=&quot;major_surgery&quot;) %&gt;% as.data.table</code></pre>
+<pre><code>## Reading from &quot;Doctor Types to Keep&quot;</code></pre>
+<pre><code>## Range &quot;&#39;major_surgery&#39;&quot;</code></pre>
+<pre class="r"><code>surgery &lt;-  surgery[is.na(Remove) ] %&gt;% .[[&quot;NUCC Classification&quot;]]</code></pre>
+<pre class="r"><code>  npi_prov_pair &lt;-  npi_full[osa_class %in% surgery] %&gt;% 
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ] </code></pre>
+</div>
+<div id="load-data" class="section level1">
+<h1>Load Data</h1>
+<pre class="r"><code>bun_proc &lt;-  disk.frame(&quot;full_apcd.df&quot;)</code></pre>
+<pre class="r"><code>hip &lt;- bun_proc[surg_bun_t_hip==T &amp; surg_bun_t_arthro==T]</code></pre>
+<pre class="r"><code>hip &lt;-  hip[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %&gt;% map_chr(get_npi_standard_name)
+  )]</code></pre>
+<pre class="r"><code>hip %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+<pre class="r"><code>hip %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 255 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 surg_bun_t_arthroplasty       0.309
+##  2 surg_bun_t_total              0.309
+##  3 duration_max                  0.263
+##  4 radi_bun_t_pelvi              0.246
+##  5 radi_bun_t_exam               0.233
+##  6 radi_bun_t_x-ray              0.233
+##  7 anes_bun_t_anes               0.202
+##  8 anes_bun_t_anesth             0.202
+##  9 surg_bun_t_repair             0.201
+## 10 medi_bun_t_inject             0.185
+## # ... with 245 more rows</code></pre>
+<pre class="r"><code>hip %&gt;% get_tag_density_information(&quot;surg_bun_t_arthroplasty&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_arthroplasty&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 2350</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-12-2.png" width="672" /></p>
+<pre class="r"><code>hip_total &lt;- hip[surg_bun_t_arthroplasty==T &amp; cnt&gt;2 &amp; faci_bun_sum_med &gt; 500]
+hip_scopy &lt;- hip[surg_bun_t_arthroplasty==F]</code></pre>
+<div id="work-on-total-hip-arhtroplasties-first" class="section level2">
+<h2>work on total hip arhtroplasties first</h2>
+<p>once again check price density and correlated tags</p>
+<pre class="r"><code>hip_total %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<pre class="r"><code>hip_total %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 200 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 radi_bun_t_without_dye       0.284
+##  2 surg_bun_t_place             0.278
+##  3 surg_bun_t_revise            0.278
+##  4 radi_bun_t_ct                0.272
+##  5 anes_bun_t_surg              0.250
+##  6 anes_bun_t_joint             0.242
+##  7 surg_bun_t_resect            0.236
+##  8 surg_bun_t_joint             0.219
+##  9 radi_bun_t_arm               0.207
+## 10 radi_bun_t_leg               0.207
+## # ... with 190 more rows</code></pre>
+<pre class="r"><code>hip_total %&gt;% get_tag_density_information(&quot;radi_bun_t_without_dye&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ radi_bun_t_without_dye&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 12400</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-15-2.png" width="672" /></p>
+<pre class="r"><code>hip_total &lt;- hip_total[radi_bun_t_without_dye==F]</code></pre>
+<p>once again check price density and correlated tags</p>
+<pre class="r"><code>hip_total %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
+<pre class="r"><code>hip_total %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 157 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 surg_bun_t_embolize       0.176
+##  2 surg_bun_t_resect         0.176
+##  3 radi_bun_t_arm            0.176
+##  4 radi_bun_t_artery         0.176
+##  5 radi_bun_t_leg            0.176
+##  6 radi_bun_t_vessel         0.176
+##  7 anes_bun_t_mod_sed        0.176
+##  8 surg_bun_t_pelvis         0.169
+##  9 surg_bun_t_exc            0.151
+## 10 surg_bun_t_tum            0.140
+## # ... with 147 more rows</code></pre>
+<pre class="r"><code># hip_total %&gt;% get_tag_density_information(&quot;surg_bun_t_resect&quot;) %&gt;% print()
+hip_total[surg_bun_t_resect ==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<p>there is only one with this so we will omit</p>
+<pre class="r"><code>hip_total &lt;- hip_total[surg_bun_t_resect==F]</code></pre>
+<p>once again check price density and correlated tags</p>
+<pre class="r"><code>hip_total %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-20-1.png" width="672" /></p>
+<pre class="r"><code>hip_total %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 150 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 surg_bun_t_pelvis       0.172 
+##  2 anes_bun_t_anes         0.166 
+##  3 anes_bun_t_anesth       0.166 
+##  4 surg_bun_t_exc          0.154 
+##  5 anes_bun_t_repair       0.143 
+##  6 path_bun_t_hormone      0.129 
+##  7 path_bun_t_thyroid      0.129 
+##  8 surg_bun_t_place        0.118 
+##  9 surg_bun_t_revise       0.118 
+## 10 surg_bun_t_dev          0.0988
+## # ... with 140 more rows</code></pre>
+<pre class="r"><code>hip_total %&gt;% get_tag_density_information(&quot;surg_bun_t_pelvis&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_pelvis&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 785</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-21-2.png" width="672" /></p>
+<p>There are only two, so they do not need to be their own option in the tool.</p>
+<pre class="r"><code>hip_total &lt;- hip_total[surg_bun_t_pelvis==F]</code></pre>
+<p>once again check price density and correlated tags</p>
+<pre class="r"><code>hip_total %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-23-1.png" width="672" /></p>
+<pre class="r"><code>hip_total %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 149 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 anes_bun_t_anes          0.167
+##  2 anes_bun_t_anesth        0.167
+##  3 anes_bun_t_repair        0.146
+##  4 path_bun_t_hormone       0.131
+##  5 path_bun_t_thyroid       0.131
+##  6 surg_bun_t_place         0.121
+##  7 surg_bun_t_revise        0.121
+##  8 surg_bun_t_dev           0.101
+##  9 surg_bun_t_device        0.101
+## 10 surg_bun_t_drug          0.101
+## # ... with 139 more rows</code></pre>
+<pre class="r"><code>hip_total %&gt;% get_tag_density_information(&quot;anes_bun_t_anes&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_anes&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 2990</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-24-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-24-2.png" width="672" /></p>
+<p>I am really only interested in the proceduers which included anesthesia costs for the total hip replacement.</p>
+<pre class="r"><code>hip_total &lt;- hip_total[anes_bun_t_anes == T]</code></pre>
+<p>once again check price density and correlated tags</p>
+<pre class="r"><code>hip_total %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-26-1.png" width="672" /></p>
+<pre class="r"><code>hip_total %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 141 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 anes_bun_t_repair        0.15 
+##  2 path_bun_t_hormone       0.137
+##  3 path_bun_t_thyroid       0.137
+##  4 surg_bun_t_place         0.125
+##  5 surg_bun_t_revise        0.125
+##  6 duration_mean            0.118
+##  7 surg_bun_t_joint         0.113
+##  8 radi_bun_t_exam          0.105
+##  9 radi_bun_t_x-ray         0.105
+## 10 surg_bun_t_dev           0.104
+## # ... with 131 more rows</code></pre>
+<pre class="r"><code>hip_total %&gt;% get_tag_density_information(&quot;anes_bun_t_repair&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_repair&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 3320</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-27-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-27-2.png" width="672" /></p>
+<pre class="r"><code>hip_total &lt;- hip_total[anes_bun_t_repair==F]</code></pre>
+<p>once again check price density and correlated tags</p>
+<pre class="r"><code>hip_total %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-29-1.png" width="672" /></p>
+<pre class="r"><code>hip_total %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 136 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 path_bun_t_hormone           0.140 
+##  2 path_bun_t_thyroid           0.140 
+##  3 duration_mean                0.113 
+##  4 radi_bun_t_exam              0.106 
+##  5 radi_bun_t_x-ray             0.106 
+##  6 radi_bun_t_pelvi             0.0961
+##  7 radi_bun_t_chest             0.082 
+##  8 faci_bun_t_consultation      0.0809
+##  9 faci_bun_t_inpatient         0.0809
+## 10 medi_bun_t_inject            0.0766
+## # ... with 126 more rows</code></pre>
+<pre class="r"><code># hip_total %&gt;% get_tag_density_information(&quot;path_bun_t_thyroid&quot;) %&gt;% print()
+hip_total[path_bun_t_thyroid==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<p>only one so we will omit it.</p>
+<pre class="r"><code>hip_total &lt;- hip_total[path_bun_t_thyroid==F]</code></pre>
+<p>once again check price density and correlated tags</p>
+<pre class="r"><code>hip_total %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-32-1.png" width="672" /></p>
+<pre class="r"><code>hip_total %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 134 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 duration_mean                0.104 
+##  2 radi_bun_t_exam              0.0987
+##  3 radi_bun_t_x-ray             0.0987
+##  4 radi_bun_t_pelvi             0.0903
+##  5 radi_bun_t_chest             0.0833
+##  6 faci_bun_t_consultation      0.0819
+##  7 faci_bun_t_inpatient         0.0819
+##  8 medi_bun_t_inject            0.0766
+##  9 path_bun_t_blood             0.0765
+## 10 radi_bun_t_angiography       0.0737
+## # ... with 124 more rows</code></pre>
+<pre class="r"><code># hip_total %&gt;% get_tag_density_information(&quot;faci_bun_t_consultation&quot;) %&gt;% print()
+hip_total[faci_bun_t_consultation==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>hip_total  &lt;- hip_total[faci_bun_t_consultation==F]</code></pre>
+<p>once again check price density and correlated tags</p>
+<pre class="r"><code>hip_total %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hip-replacement.en-us_files/figure-html/unnamed-chunk-35-1.png" width="672" /></p>
+<pre class="r"><code>hip_total %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 132 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 duration_mean               0.103 
+##  2 radi_bun_t_exam             0.094 
+##  3 radi_bun_t_x-ray            0.094 
+##  4 radi_bun_t_pelvi            0.0868
+##  5 radi_bun_t_chest            0.0838
+##  6 path_bun_t_blood            0.0765
+##  7 medi_bun_t_inject           0.0765
+##  8 radi_bun_t_angiography      0.0741
+##  9 radi_bun_t_ct               0.0741
+## 10 path_bun_t_glucose          0.0699
+## # ... with 122 more rows</code></pre>
+<pre class="r"><code>hip_total_btbv4 &lt;- hip_total %&gt;% btbv4()</code></pre>
+<pre class="r"><code>hip_total_bq &lt;- hip_total_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs=&quot;Orthopaedic Surgery&quot;
+                                  ),
+                                                .f=calculate_primary_doctor) %&gt;% as.character()
+                     ] %&gt;% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c(&quot;BOTH_DOC_FAIL_CRIT&quot;, &quot;TWO_FIT_ALL_SPECS&quot;))] %&gt;% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %&gt;% 
+  .[,`:=`(procedure_type=3, procedure_modifier=&quot;Total Hip Replacement&quot;)]</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CHRISTOPHER EARL PELT&quot; &quot;MICHAEL CHAD MAHAN&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEREMY MARK GILILLAND&quot; &quot;MICHAEL CHAD MAHAN&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEREMY MARK GILILLAND&quot; &quot;KEVIN  CAMPBELL&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CHRISTOPHER L. PETERS&quot; &quot;KEVIN  CAMPBELL&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CHRISTOPHER L. PETERS&quot; &quot;STEVEN  DONOHOE&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CHRISTOPHER EARL PELT&quot; &quot;STEVEN  DONOHOE&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CHRISTOPHER L. PETERS&quot; &quot;MICHAEL CHAD MAHAN&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MICHAEL H BOURNE&quot; &quot;E MARC  MARIANI&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DARIN KIMBALL ALLRED&quot;     &quot;WARREN LEWIS BUTTERFIELD&quot;</code></pre>
+<pre class="r"><code>hip_total_bq &lt;- hip_total_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac  ,
+most_important_fac_npi, 
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci
+)]</code></pre>
+<pre class="r"><code>bq_table_upload(x=procedure_table, values= hip_total_bq, create_disposition=&#39;CREATE_IF_NEEDED&#39;, write_disposition=&#39;WRITE_APPEND&#39;)</code></pre>
+</div>
+</div>
+
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small">TAGGED IN</span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="/tags/hip/">Hip</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/replace/">Replace</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  
+      <nav >
+        <ul class="post-actions post-action-nav">
+          
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="/2020/12/hernia-repair.en-us/" data-tooltip="Hernia Repair">
+              
+                  <i class="fa fa-angle-left"></i>
+                  <span class="hide-xs hide-sm text-small icon-ml">NEXT</span>
+                </a>
+            </li>
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="/2020/12/knee-replacement.en-us/" data-tooltip="Knee Replacement">
+              
+                  <span class="hide-xs hide-sm text-small icon-mr">PREVIOUS</span>
+                  <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+          
+        </ul>
+      </nav>
+    <ul class="post-actions post-action-share" >
+      
+        <li class="post-action hide-lg hide-md hide-sm">
+          <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+            <i class="fa fa-share-alt"></i>
+          </a>
+        </li>
+        
+      
+      
+        <li class="post-action">
+          <a class="post-action-btn btn btn--default" href="#disqus_thread">
+            <i class="fa fa-comment-o"></i>
+          </a>
+        </li>
+      
+      <li class="post-action">
+        
+          <a class="post-action-btn btn btn--default" href="#">
+        
+          <i class="fa fa-list"></i>
+        </a>
+      </li>
+    </ul>
+  
+</div>
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2021 Utah OSA - Health Cost Compare . All Rights Reserved
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+        <div class="post-actions-wrap">
+  
+      <nav >
+        <ul class="post-actions post-action-nav">
+          
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="/2020/12/hernia-repair.en-us/" data-tooltip="Hernia Repair">
+              
+                  <i class="fa fa-angle-left"></i>
+                  <span class="hide-xs hide-sm text-small icon-ml">NEXT</span>
+                </a>
+            </li>
+            <li class="post-action">
+              
+                <a class="post-action-btn btn btn--default tooltip--top" href="/2020/12/knee-replacement.en-us/" data-tooltip="Knee Replacement">
+              
+                  <span class="hide-xs hide-sm text-small icon-mr">PREVIOUS</span>
+                  <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+          
+        </ul>
+      </nav>
+    <ul class="post-actions post-action-share" >
+      
+        <li class="post-action hide-lg hide-md hide-sm">
+          <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+            <i class="fa fa-share-alt"></i>
+          </a>
+        </li>
+        
+      
+      
+        <li class="post-action">
+          <a class="post-action-btn btn btn--default" href="#disqus_thread">
+            <i class="fa fa-comment-o"></i>
+          </a>
+        </li>
+      
+      <li class="post-action">
+        
+          <a class="post-action-btn btn btn--default" href="#">
+        
+          <i class="fa fa-list"></i>
+        </a>
+      </li>
+    </ul>
+  
+</div>
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+  <i id="btn-close-shareoptions" class="fa fa-close"></i>
+  <ul class="share-options">
+    
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="/img/osa-seal.jpg" alt="Author&#39;s picture" />
+    
+    <h4 id="about-card-name">Utah OSA - Health Cost Compare </h4>
+    
+      <div id="about-card-bio">Documentation for Office of the State Auditor&rsquo;s methodology in contstructing the Health Care Compare Tool</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Performance Audit Team
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        SLC, Utah
+      </div>
+    
+  </div>
+</div>
+
+    
+
+    
+  
+    
+      <div id="cover" style="background-image:url('/images/cover.jpg');"></div>
+    
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
+
+
+<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+
+
+<script lang="javascript">
+window.onload = updateMinWidth;
+window.onresize = updateMinWidth;
+document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
+function updateMinWidth() {
+  var sidebar = document.getElementById("sidebar");
+  var main = document.getElementById("main");
+  main.style.minWidth = "";
+  var w1 = getComputedStyle(main).getPropertyValue("min-width");
+  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
+  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
+  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
+}
+</script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = '\/2020\/12\/hip-replacement.en-us\/';
+          
+            this.page.identifier = '\/2020\/12\/hip-replacement.en-us\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'hugo-tranquilpeak-theme';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+    
+  </body>
+</html>
+

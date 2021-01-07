@@ -1,0 +1,644 @@
+---
+title: Hysterectomy
+author: Alexander Nielson
+date: '2020-12-31'
+slug: hysterectomy.en-us
+categories:
+  - Major Surgery
+tags:
+  - Hysterectomy
+  - Hyster
+  - Ectomy
+  - OBGYN
+keywords:
+  - tech
+---
+
+<script src="/rmarkdown-libs/jquery/jquery.min.js"></script>
+<script src="/rmarkdown-libs/elevate-section-attrs/elevate-section-attrs.js"></script>
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In this section we will:
+* identify which Hysterectomy procedures were excluded and why
+* identify which different Hysterectomy Repair subgroups were created and why</p>
+<p>If you have questions or concerns about this data please contact Alexander Nielson (<a href="mailto:alexnielson@utah.gov" class="email">alexnielson@utah.gov</a>)</p>
+</div>
+<div id="load-libraries" class="section level1">
+<h1>Load Libraries</h1>
+<p>Load Libraries</p>
+<pre class="r"><code>library(data.table)
+library(tidyverse)</code></pre>
+<pre><code>## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;
+## when loading &#39;dplyr&#39;</code></pre>
+<pre class="r"><code>library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )
+library(hcctools2)</code></pre>
+<p>Establish color palettes</p>
+<pre class="r"><code>cust_color_pal1 &lt;- c(
+        &quot;Anesthesia&quot; = &quot;#f3476f&quot;,
+        &quot;Facility&quot; = &quot;#e86a33&quot;,
+        &quot;Medicine Proc&quot; = &quot;#e0a426&quot;,
+        &quot;Pathology&quot; = &quot;#77bf45&quot;,
+        &quot;Radiology&quot; = &quot;#617ff7&quot;,
+        &quot;Surgery&quot; = &quot;#a974ee&quot;
+    )
+
+cust_color_pal2 &lt;- c(
+        &quot;TRUE&quot; = &quot;#617ff7&quot;,
+        &quot;FALSE&quot; = &quot;#e0a426&quot;
+    )
+
+cust_color_pal3 &lt;- c(
+        &quot;above avg&quot; = &quot;#f3476f&quot;,
+        &quot;avg&quot; = &quot;#77bf45&quot;,
+        &quot;below avg&quot; = &quot;#a974ee&quot;
+    )
+
+
+
+  fac_ref_regex &lt;- &quot;(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)&quot;</code></pre>
+</div>
+<div id="connect-to-gcp-database" class="section level1">
+<h1>Connect to GCP database</h1>
+<pre class="r"><code>bigrquery::bq_auth(path = &#39;D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json&#39;)
+
+# set my project ID and dataset name
+project_id &lt;- &#39;healthcare-compare-prod&#39;
+dataset_name &lt;- &#39;healthcare_compare&#39;
+
+con &lt;- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)</code></pre>
+</div>
+<div id="get-npi-table" class="section level1">
+<h1>Get NPI table</h1>
+<pre class="r"><code>query &lt;-  paste0(&quot;SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`&quot;)
+
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full &lt;- dbGetQuery(con, query) %&gt;%
+  data.table()</code></pre>
+</div>
+<div id="get-a-subset-of-the-npi-providers-based-upon-taxonomy-groups" class="section level1">
+<h1>get a subset of the NPI providers based upon taxonomy groups</h1>
+<pre class="r"><code>gs4_auth(email=&quot;alexnielson@utah.gov&quot;)</code></pre>
+<pre class="r"><code>surgery &lt;- read_sheet(&quot;https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0&quot;,
+                    sheet=&quot;major_surgery&quot;) %&gt;% as.data.table</code></pre>
+<pre><code>## Reading from &quot;Doctor Types to Keep&quot;</code></pre>
+<pre><code>## Range &quot;&#39;major_surgery&#39;&quot;</code></pre>
+<pre class="r"><code>surgery &lt;-  surgery[is.na(Remove) ] %&gt;% .[[&quot;NUCC Classification&quot;]]</code></pre>
+<pre class="r"><code>  npi_prov_pair &lt;-  npi_full[osa_class %in% surgery] %&gt;%
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ]</code></pre>
+</div>
+<div id="load-data" class="section level1">
+<h1>Load Data</h1>
+<pre class="r"><code>bun_proc &lt;-  disk.frame(&quot;full_apcd.df&quot;)</code></pre>
+<pre class="r"><code>hyst &lt;- bun_proc[surg_bun_t_hysterectomy==T &amp; cnt &gt;2 &amp; faci_bun_sum_med &gt; 500]</code></pre>
+<pre class="r"><code>hyst &lt;-  hyst[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %&gt;% map_chr(get_npi_standard_name)
+  )]</code></pre>
+<pre class="r"><code>hyst %&gt;% saveRDS(paste0(&quot;hysterectomy&quot;, Sys.Date(),&quot;.RDS&quot;))</code></pre>
+<pre class="r"><code>hyst %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<pre class="r"><code>hyst %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 219 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 duration_max              0.528
+##  2 anes_bun_t_upper          0.443
+##  3 medi_bun_t_wound          0.432
+##  4 medi_bun_t_cathet         0.430
+##  5 surg_bun_t_colon          0.428
+##  6 faci_bun_t_critical       0.411
+##  7 surg_bun_t_rectal         0.401
+##  8 anes_bun_t_cs             0.394
+##  9 surg_bun_t_removal        0.376
+## 10 duration_mean             0.374
+## # ... with 209 more rows</code></pre>
+<pre class="r"><code>hyst %&gt;% plot_price_vs_duration() %&gt;% print()</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+<pre class="r"><code>hyst %&gt;% get_tag_density_information(&quot;anes_bun_t_upper&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_upper&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 9530</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-14-2.png" width="672" /></p>
+<pre class="r"><code>hyst &lt;- hyst[anes_bun_t_upper==F]</code></pre>
+<pre class="r"><code>hyst %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<pre class="r"><code>hyst %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 215 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 anes_bun_t_cs             0.465
+##  2 duration_max              0.430
+##  3 anes_bun_t_deliver        0.401
+##  4 anes_bun_t_liver          0.401
+##  5 medi_bun_t_cathet         0.392
+##  6 surg_bun_t_delivery       0.388
+##  7 surg_bun_t_liver          0.388
+##  8 surg_bun_t_cesarean       0.34 
+##  9 medi_bun_t_inject         0.332
+## 10 medi_bun_t_sodium         0.330
+## # ... with 205 more rows</code></pre>
+<pre class="r"><code>hyst &lt;- hyst[duration_mean&lt;3]
+hyst %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
+<pre class="r"><code>hyst %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 213 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 duration_max              0.486
+##  2 anes_bun_t_cs             0.475
+##  3 anes_bun_t_deliver        0.410
+##  4 anes_bun_t_liver          0.410
+##  5 medi_bun_t_cathet         0.401
+##  6 surg_bun_t_delivery       0.396
+##  7 surg_bun_t_liver          0.396
+##  8 surg_bun_t_cesarean       0.347
+##  9 duration_mean             0.346
+## 10 anes_bun_t_bladder        0.334
+## # ... with 203 more rows</code></pre>
+<pre class="r"><code>hyst %&gt;% get_tag_density_information(&quot;anes_bun_t_deliver&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_deliver&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 4760</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-18-2.png" width="672" /></p>
+<pre class="r"><code>hyst &lt;- hyst[anes_bun_t_deliver==F]</code></pre>
+<pre class="r"><code>hyst %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-20-1.png" width="672" /></p>
+<pre class="r"><code>hyst %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 200 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 duration_max             0.456
+##  2 anes_bun_t_bladder       0.374
+##  3 anes_bun_t_removal       0.374
+##  4 surg_bun_t_removal       0.362
+##  5 duration_mean            0.354
+##  6 surg_bun_t_remov         0.328
+##  7 surg_bun_t_colon         0.324
+##  8 medi_bun_t_inject        0.322
+##  9 medi_bun_t_sodium        0.321
+## 10 medi_bun_t_cathet        0.319
+## # ... with 190 more rows</code></pre>
+<pre class="r"><code>hyst %&gt;% get_tag_density_information(&quot;anes_bun_t_bladder&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_bladder&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1410</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-21-2.png" width="672" /></p>
+<pre class="r"><code>hyst &lt;- hyst[anes_bun_t_bladder==F]</code></pre>
+<pre class="r"><code>hyst %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-23-1.png" width="672" /></p>
+<pre class="r"><code>hyst %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 191 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 duration_max               0.405
+##  2 surg_bun_t_colon           0.351
+##  3 duration_mean              0.341
+##  4 medi_bun_t_inject          0.320
+##  5 medi_bun_t_sodium          0.319
+##  6 surg_bun_t_dilat           0.317
+##  7 surg_bun_t_dilation        0.317
+##  8 anes_bun_t_cs              0.317
+##  9 faci_bun_t_discharge       0.317
+## 10 surg_bun_t_vag             0.281
+## # ... with 181 more rows</code></pre>
+<div id="hyst_vag" class="section level2">
+<h2>hyst_vag</h2>
+<pre class="r"><code>hyst_vag &lt;- hyst[surg_bun_t_vag == T]</code></pre>
+<pre class="r"><code>hyst_vag %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-25-1.png" width="672" /></p>
+<pre class="r"><code>hyst_vag %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 153 x 2
+##    name                       correlation
+##    &lt;chr&gt;                            &lt;dbl&gt;
+##  1 surg_bun_t_coloproctostomy       0.337
+##  2 duration_max                     0.328
+##  3 medi_bun_t_inject                0.314
+##  4 medi_bun_t_sodium                0.312
+##  5 surg_bun_t_defect                0.311
+##  6 surg_bun_t_bladder               0.280
+##  7 surg_bun_t_repair                0.280
+##  8 duration_mean                    0.279
+##  9 path_bun_t_complete              0.222
+## 10 path_bun_t_without_scope         0.218
+## # ... with 143 more rows</code></pre>
+<pre class="r"><code>hyst_vag[surg_bun_t_coloproctostomy==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>hyst_vag[surg_bun_t_bladder==T] %&gt;% nrow()</code></pre>
+<pre><code>## [1] 24</code></pre>
+<pre class="r"><code>hyst_vag &lt;- hyst_vag[surg_bun_t_coloproctostomy==F &amp; surg_bun_t_bladder==F]</code></pre>
+<pre class="r"><code>hyst_vag %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-29-1.png" width="672" /></p>
+<pre class="r"><code>hyst_vag %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 145 x 2
+##    name                     correlation
+##    &lt;chr&gt;                          &lt;dbl&gt;
+##  1 duration_max                   0.391
+##  2 duration_mean                  0.354
+##  3 path_bun_t_without_scope       0.283
+##  4 anes_bun_t_hysterectomy        0.268
+##  5 anes_bun_t_vag                 0.268
+##  6 medi_bun_t_sodium              0.257
+##  7 medi_bun_t_inject              0.253
+##  8 anes_bun_t_anes                0.229
+##  9 anes_bun_t_anesth              0.229
+## 10 surg_bun_t_total               0.219
+## # ... with 135 more rows</code></pre>
+<pre class="r"><code>hyst_vag %&gt;% get_tag_density_information(&quot;path_bun_t_without_scope&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ path_bun_t_without_scope&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1320</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-30-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-30-2.png" width="672" /></p>
+<pre class="r"><code>hyst_vag &lt;- hyst_vag[path_bun_t_without_scope==F]</code></pre>
+<pre class="r"><code>hyst_vag %&gt;% get_tag_density_information(&quot;anes_bun_t_hysterectomy&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_hysterectomy&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1430</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-32-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-32-2.png" width="672" /></p>
+<pre class="r"><code>hyst_vag_btbv4 &lt;- hyst_vag %&gt;% btbv4()</code></pre>
+<pre class="r"><code>hyst_vag_bq &lt;- hyst_vag_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs=&quot;Obstetrics &amp; Gynecology&quot;
+                                  ),
+                                                .f=calculate_primary_doctor) %&gt;% as.character()
+                     ] %&gt;% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c(&quot;BOTH_DOC_FAIL_CRIT&quot;, &quot;TWO_FIT_ALL_SPECS&quot;))] %&gt;% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %&gt;% 
+  .[,`:=`(
+    procedure_type=4,
+    procedure_modifier = &quot;Vaginal Hysterectomy&quot;
+  )]</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;TRAVIS JOHN BILANZICH&quot; &quot;DAREN OWEN GATHERUM&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;RUSSELL A SMITH&quot;      &quot;ROBERT WENDALL LATER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;GARY K FOWERS&quot;   &quot;DAVID A KIRKMAN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CHRISTIAN D FROERER&quot; &quot;JEFFREY H BARTON&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CRAIG L HURST&quot; &quot;KAREN  BOHEEN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;RUSSELL A SMITH&quot;     &quot;ALICIA TABISH JONES&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ROBERT  MERRILL&quot;    &quot;SUPHITHAYA  ANDERS&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SPENCER N COLBY&quot;     &quot;AMANDA M. CLEVELAND&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;EDWIN RAY ENGLAND&quot;   &quot;TRICIA ANNE TWELVES&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CLAYTON SCOTT SYNDERGAARD&quot; &quot;BEN DOUGLAS WILLIAMS&quot;     
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;TANDY GARTH OLSEN&quot; &quot;ERICA LYNN SMITH&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEFF DAVID NANCE&quot;  &quot;STEVEN GREG NANCE&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SPENCER N COLBY&quot; &quot;SCOTT F EPSTEIN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;GEORGE C GOURLEY&quot; &quot;WAYNE R YOUNG&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALTON D BURGETT&quot;  &quot;MATTHEW S WILSON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ANDREA JULIET HEBERT&quot; &quot;AMELIA  PARRETT&quot;     
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;WESLEY BOYD DAVIS&quot; &quot;JULIA  JOHANSSON&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JAMES P LAMOREAUX&quot; &quot;RYAN C. OLLERTON&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;BEN DOUGLAS WILLIAMS&quot; &quot;JOHN D NOLTE&quot;        
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ROBERT  MERRILL&quot;      &quot;JEFFREY DENNIS QUINN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JANE C BOWMAN&quot;      &quot;SUPHITHAYA  ANDERS&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;STEPHANIE DIANE HENDERSON&quot; &quot;BARBARA  HURST&quot;           
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MICHAEL LAMAR TWEDE&quot; &quot;LAYNE A SMITH&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SCOTT E HANSEN&quot;    &quot;KATHLEEN M LANGER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;BARRY A NOORDA&quot;       &quot;ANNE SADLER BLACKETT&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DANIEL FRED KAELBERER&quot;  &quot;SPENCER EDMOND PIERSON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;BROOKE LANE HANSEN&quot; &quot;LUCINDA J ROBINSON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DARREN  HOUSEL&quot; &quot;DAVID  BIERER&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;GAYLE M STEWART&quot; &quot;STEPHEN D LASH&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CRAIG L HURST&quot; &quot;KAREN  BOHEEN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;EVAN  JONES&quot;      &quot;RYAN C. OLLERTON&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SARA ELIZABETH WOOD&quot; &quot;AUDREY A JIRICKO&quot;   
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CHAD JEREMY CLARK&quot; &quot;JEANNE M FALK&quot;    
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;RYAN NELSON JONES&quot; &quot;ANDREW  THOMAS&quot;</code></pre>
+<pre class="r"><code>hyst_vag_bq &lt;- hyst_vag_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac  ,
+most_important_fac_npi, 
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]</code></pre>
+<pre class="r"><code>bq_table_upload(x=procedure_table, values= hyst_vag_bq, create_disposition=&#39;CREATE_IF_NEEDED&#39;, write_disposition=&#39;WRITE_APPEND&#39;)</code></pre>
+</div>
+<div id="hyst_total" class="section level2">
+<h2>hyst_total</h2>
+<pre class="r"><code>hyst_total &lt;- hyst[surg_bun_t_total == T]</code></pre>
+<pre class="r"><code>hyst_total %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-38-1.png" width="672" /></p>
+<pre class="r"><code>hyst_total %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 128 x 2
+##    name                  correlation
+##    &lt;chr&gt;                       &lt;dbl&gt;
+##  1 surg_bun_t_colon            0.456
+##  2 surg_bun_t_art              0.400
+##  3 surg_bun_t_part             0.400
+##  4 surg_bun_t_partial          0.400
+##  5 surg_bun_t_removal          0.381
+##  6 surg_bun_t_remov            0.345
+##  7 path_bun_t_tumor            0.321
+##  8 surg_bun_t_laparoscop       0.317
+##  9 surg_bun_t_renal            0.316
+## 10 surg_bun_t_lap              0.292
+## # ... with 118 more rows</code></pre>
+<pre class="r"><code>hyst_total %&gt;% get_tag_density_information(&quot;path_bun_t_tumor&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ path_bun_t_tumor&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 5180</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-39-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-39-2.png" width="672" /></p>
+<pre class="r"><code>hyst_total &lt;- hyst_total[surg_bun_t_colon==F &amp; surg_bun_t_partial==F &amp; path_bun_t_tumor==F &amp; surg_bun_t_renal==F ]</code></pre>
+<pre class="r"><code>hyst_total %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-41-1.png" width="672" /></p>
+<pre class="r"><code>hyst_total %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 122 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 surg_bun_t_complex           0.209
+##  2 medi_bun_t_cathet            0.209
+##  3 surg_bun_t_remove            0.207
+##  4 surg_bun_t_wound             0.202
+##  5 surg_bun_t_lap               0.200
+##  6 path_bun_t_immuno            0.194
+##  7 path_bun_t_immunohisto       0.194
+##  8 surg_bun_t_laparoscop        0.193
+##  9 surg_bun_t_tags              0.193
+## 10 surg_bun_t_drain             0.190
+## # ... with 112 more rows</code></pre>
+<pre class="r"><code># hyst_total %&gt;% get_tag_density_information(&quot;surg_bun_t_complex&quot;) %&gt;% print()</code></pre>
+<pre class="r"><code>hyst_total %&gt;% get_tag_density_information(&quot;surg_bun_t_remove&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_remove&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 2480</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-43-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-43-2.png" width="672" /></p>
+<pre class="r"><code>hyst_total &lt;- hyst_total[surg_bun_t_remove==F &amp; surg_bun_t_complex==F &amp; surg_bun_t_drain==F &amp; surg_bun_t_skin==F ]</code></pre>
+<pre class="r"><code>hyst_total %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/hysterectomy.en-us_files/figure-html/unnamed-chunk-45-1.png" width="672" /></p>
+<pre class="r"><code>hyst_total %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 111 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 path_bun_t_patho              0.162
+##  2 path_bun_t_pathologist        0.162
+##  3 path_bun_t_tissue             0.162
+##  4 surg_bun_t_repair             0.160
+##  5 path_bun_t_immuno             0.14 
+##  6 path_bun_t_immunohisto        0.14 
+##  7 surg_bun_t_defect             0.137
+##  8 medi_bun_t_iiv                0.131
+##  9 medi_bun_t_immun              0.131
+## 10 medi_bun_t_immunization       0.131
+## # ... with 101 more rows</code></pre>
+<pre class="r"><code>hyst_total_btbv4 &lt;- hyst_total %&gt;% btbv4()</code></pre>
+<pre class="r"><code>hyst_total_bq &lt;- hyst_total_btbv4[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs=&quot;Obstetrics &amp; Gynecology&quot;
+                                  ),
+                                                .f=calculate_primary_doctor) %&gt;% as.character()
+                     ] %&gt;% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c(&quot;BOTH_DOC_FAIL_CRIT&quot;, &quot;TWO_FIT_ALL_SPECS&quot;))] %&gt;% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)] %&gt;% 
+  .[,`:=`(
+    procedure_type=4,
+    procedure_modifier = &quot;Total Hysterectomy&quot;
+  )]</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;BEN DOUGLAS WILLIAMS&quot; &quot;JOHN D NOLTE&quot;        
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;E BRETT HORSLEY&quot;   &quot;TANDY GARTH OLSEN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CLAYTON SCOTT SYNDERGAARD&quot; &quot;BEN DOUGLAS WILLIAMS&quot;     
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALAN T RAPPLEYE&quot; &quot;BRYANT J BROWN&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID B YOUNG&quot;   &quot;DOUGLAS A ALLEN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JOHN DOUGLAS MCCARTER&quot; &quot;KORY A. HARWARD&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;GEORGE C GOURLEY&quot;         &quot;DAVID HARRISON BROADBENT&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALICIA TABISH JONES&quot;  &quot;ROBERT WENDALL LATER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;TRAVIS JOHN BILANZICH&quot; &quot;DAREN OWEN GATHERUM&quot;  
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;TANDY GARTH OLSEN&quot; &quot;ERICA LYNN SMITH&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;REED J SKINNER&quot;     &quot;JOHN DAVID LARAWAY&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JOHN DOUGLAS MCCARTER&quot; &quot;KORY A. HARWARD&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JENNIFER LYNN PARKER&quot; &quot;BRITNEY B BUNOT&quot;     
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;RUSSELL A SMITH&quot;      &quot;ROBERT WENDALL LATER&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ROBERT  MERRILL&quot;      &quot;JEFFREY DENNIS QUINN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CLAYTON SCOTT SYNDERGAARD&quot; &quot;JOHN D NOLTE&quot;             
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SPENCER P. BARNEY&quot; &quot;JESSICA RAE HUNN&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CRAIG D ASTLE&quot; &quot;BRADY  BENHAM&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;TIFFANY KRISTEN WEBER&quot; &quot;PEGGY A. NORTON&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MICHAEL LAMAR TWEDE&quot; &quot;LAYNE A SMITH&quot;      
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEFF DAVID NANCE&quot;  &quot;STEVEN GREG NANCE&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;BRYAN SETH PALMER&quot; &quot;STEVEN M BEVERLY&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;COBY THOMAS BROWN&quot; &quot;JEFFREY G ROGERS&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SHANNON L TILLY&quot;    &quot;BROOKE LANE HANSEN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JASON KEITH MORRIS&quot; &quot;JOHN DAVID LARAWAY&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;SUPHITHAYA  ANDERS&quot;   &quot;JEFFREY DENNIS QUINN&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DARREN  HOUSEL&quot; &quot;DAVID  BIERER&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;WESLEY BOYD DAVIS&quot; &quot;JULIA  JOHANSSON&quot; 
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID E LUDLOW&quot;     &quot;JOHN DAVID LARAWAY&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JANE C BOWMAN&quot;      &quot;SUPHITHAYA  ANDERS&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEFF DAVID NANCE&quot;  &quot;STEVEN GREG NANCE&quot;
+## [1] &quot;multiple meet class req&quot;
+## [1] &quot;RYAN NELSON JONES&quot; &quot;ANDREW  THOMAS&quot;</code></pre>
+<pre class="r"><code>hyst_total_bq &lt;- hyst_total_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac  ,
+most_important_fac_npi, 
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]</code></pre>
+<pre class="r"><code>bq_table_upload(x=procedure_table, values= hyst_total_bq, create_disposition=&#39;CREATE_IF_NEEDED&#39;, write_disposition=&#39;WRITE_APPEND&#39;)</code></pre>
+</div>
+</div>

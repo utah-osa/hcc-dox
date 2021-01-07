@@ -1,0 +1,1824 @@
+---
+title: Colonoscopy
+author: Alexander Nielson
+date: '2020-07-31'
+slug: colonoscopy
+categories:
+  - Major Surgery
+tags:
+  - Colonoscopy
+  - Biopsy
+  - Surgery
+keywords:
+  - tech
+---
+
+<script src="/rmarkdown-libs/jquery/jquery.min.js"></script>
+<script src="/rmarkdown-libs/elevate-section-attrs/elevate-section-attrs.js"></script>
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In this section we will:<br />
+* identify which colonoscopy procedures were excluded and why
+* identify which different colonoscopy subgroups were created and why</p>
+<p>If you have questions or concerns about this data please contact Alexander Nielson (<a href="mailto:alexnielson@utah.gov" class="email">alexnielson@utah.gov</a>)</p>
+</div>
+<div id="load-libraries" class="section level1">
+<h1>Load Libraries</h1>
+<p>Load Libraries</p>
+<pre class="r"><code>library(data.table)
+library(tidyverse)</code></pre>
+<pre><code>## Warning: replacing previous import &#39;vctrs::data_frame&#39; by &#39;tibble::data_frame&#39;
+## when loading &#39;dplyr&#39;</code></pre>
+<pre class="r"><code>library(stringi)
+library(ggridges)
+library(broom)
+library(disk.frame)
+library(RecordLinkage)
+library(googlesheets4)
+library(bigrquery)
+library(DBI)
+devtools::install_github(&quot;utah-osa/hcctools2&quot;, upgrade=&quot;never&quot; )
+library(hcctools2)</code></pre>
+<p>Establish color palettes</p>
+<pre class="r"><code>cust_color_pal1 &lt;- c(
+        &quot;Anesthesia&quot; = &quot;#f3476f&quot;,
+        &quot;Facility&quot; = &quot;#e86a33&quot;,
+        &quot;Medicine Proc&quot; = &quot;#e0a426&quot;,
+        &quot;Pathology&quot; = &quot;#77bf45&quot;,
+        &quot;Radiology&quot; = &quot;#617ff7&quot;,
+        &quot;Surgery&quot; = &quot;#a974ee&quot;
+    )
+
+cust_color_pal2 &lt;- c(
+        &quot;TRUE&quot; = &quot;#617ff7&quot;,
+        &quot;FALSE&quot; = &quot;#e0a426&quot;
+    )
+
+cust_color_pal3 &lt;- c(
+        &quot;above avg&quot; = &quot;#f3476f&quot;,
+        &quot;avg&quot; = &quot;#77bf45&quot;,
+        &quot;below avg&quot; = &quot;#a974ee&quot;
+    )
+
+
+
+  fac_ref_regex &lt;- &quot;(UTAH)|(IHC)|(HOSP)|(HOSPITAL)|(CLINIC)|(ANESTH)|(SCOPY)|(SURG)|(LLC)|(ASSOC)|(MEDIC)|(CENTER)|(ASSOCIATES)|(U OF U)|(HEALTH)|(OLOGY)|(OSCOPY)|(FAMILY)|(VAMC)|(SLC)|(SALT LAKE)|(CITY)|(PROVO)|(OGDEN)|(ENDO )|( VALLEY)|( REGIONAL)|( CTR)|(GRANITE)|( INSTITUTE)|(INSTACARE)|(WASATCH)|(COUNTY)|(PEDIATRIC)|(CORP)|(CENTRAL)|(URGENT)|(CARE)|(UNIV)|(ODYSSEY)|(MOUNTAINSTAR)|( ORTHOPEDIC)|(INSTITUT)|(PARTNERSHIP)|(PHYSICIAN)|(CASTLEVIEW)|(CONSULTING)|(MAGEMENT)|(PRACTICE)|(EMERGENCY)|(SPECIALISTS)|(DIVISION)|(GUT WHISPERER)|(INTERMOUNTAIN)|(OBGYN)&quot;</code></pre>
+</div>
+<div id="connect-to-gcp-database" class="section level1">
+<h1>Connect to GCP database</h1>
+<pre class="r"><code>bigrquery::bq_auth(path = &#39;D:/gcp_keys/healthcare-compare-prod-95b3b7349c32.json&#39;)
+
+# set my project ID and dataset name
+project_id &lt;- &#39;healthcare-compare-prod&#39;
+dataset_name &lt;- &#39;healthcare_compare&#39;
+
+con &lt;- dbConnect(
+  bigrquery::bigquery(),
+  project = project_id,
+  dataset = dataset_name,
+  billing = project_id
+)</code></pre>
+</div>
+<div id="get-npi-table" class="section level1">
+<h1>Get NPI table</h1>
+<pre class="r"><code>query &lt;-  paste0(&quot;SELECT npi, clean_name, osa_group, osa_class, osa_specialization
+                 FROM `healthcare-compare-prod.healthcare_compare.npi_full`&quot;)
+                       
+#bq_project_query(billing, query) # uncomment to determine billing price for above query.
+
+npi_full &lt;- dbGetQuery(con, query) %&gt;%
+  data.table() </code></pre>
+</div>
+<div id="get-a-subset-of-the-npi-providers-based-upon-taxonomy-groups" class="section level1">
+<h1>get a subset of the NPI providers based upon taxonomy groups</h1>
+<pre class="r"><code>gs4_auth(email=&quot;alexnielson@utah.gov&quot;)</code></pre>
+<pre class="r"><code>surgery &lt;- read_sheet(&quot;https://docs.google.com/spreadsheets/d/1GY8lKwUJuPHtpUl4EOw9eriLUDG9KkNWrMbaSnA5hOU/edit#gid=0&quot;,
+                    sheet=&quot;major_surgery&quot;) %&gt;% as.data.table</code></pre>
+<pre><code>## Reading from &quot;Doctor Types to Keep&quot;</code></pre>
+<pre><code>## Range &quot;&#39;major_surgery&#39;&quot;</code></pre>
+<pre class="r"><code>surgery &lt;-  surgery[is.na(Remove) ] %&gt;% .[[&quot;NUCC Classification&quot;]]</code></pre>
+<pre class="r"><code>  npi_prov_pair &lt;-  npi_full[osa_class %in% surgery] %&gt;% 
+    .[,.(npi=npi,
+         clean_name = clean_name
+         )
+      ] </code></pre>
+</div>
+<div id="load-data" class="section level1">
+<h1>Load Data</h1>
+<pre class="r"><code>bun_proc &lt;-  disk.frame(&quot;full_apcd.df&quot;)</code></pre>
+<pre class="r"><code>cscopy &lt;- bun_proc[surg_bun_t_colonoscopy == T &amp; cnt &gt;5 &amp; tp_med &lt; 10000]</code></pre>
+<pre class="r"><code>cscopy &lt;-  cscopy[,`:=`(
+  surg_sp_name_clean = surg_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  surg_bp_name_clean = surg_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  medi_sp_name_clean = medi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  medi_bp_name_clean = medi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  radi_sp_name_clean = radi_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  radi_bp_name_clean = radi_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  path_sp_name_clean = path_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  path_bp_name_clean = path_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  anes_sp_name_clean = anes_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  anes_bp_name_clean = anes_bp_npi %&gt;% map_chr(get_npi_standard_name),
+  
+  faci_sp_name_clean = faci_sp_npi %&gt;% map_chr(get_npi_standard_name),
+  faci_bp_name_clean = faci_bp_npi %&gt;% map_chr(get_npi_standard_name)
+                           )]</code></pre>
+<pre class="r"><code>cscopy %&gt;% saveRDS(&quot;cscopy.RDS&quot;)</code></pre>
+<pre class="r"><code>cscopy &lt;- readRDS(&quot;cscopy.RDS&quot;)</code></pre>
+<p>anything under 600 is known to be too low. while some clinics may perform colonoscopies at a lower rate, a 600 dolar charge is not typical.</p>
+<pre class="r"><code>cscopy &lt;- cscopy[tp_med &gt; 600 &amp; tp_med &lt; 10000]</code></pre>
+<pre class="r"><code>cscopy[,tp_med] %&gt;% summary()</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##   605.3  1709.2  2158.0  2624.4  3170.9  9996.3</code></pre>
+<div id="a.-standard" class="section level2">
+<h2>A. Standard</h2>
+<p>We want to find the typical/standard colonoscopy. To do this we need to split and filter out the procedures that we would not typically think as a standard colonoscopy. These groups may be valid and deserve their own category, or they may be rare procedure types which we do not believe the average customer is shopping for.</p>
+<pre class="r"><code>cscopy %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<pre class="r"><code>cscopy %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 510 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 surg_bun_t_egd               0.374
+##  2 surg_bun_t_tip               0.371
+##  3 surg_bun_t_biopsy            0.268
+##  4 path_bun_t_patho             0.256
+##  5 path_bun_t_pathologist       0.256
+##  6 path_bun_t_tissue            0.256
+##  7 medi_bun_t_sodium            0.238
+##  8 surg_bun_t_sub               0.212
+##  9 surg_bun_t_njx               0.208
+## 10 path_bun_t_immunohisto       0.193
+## # ... with 500 more rows</code></pre>
+<p>lets compare the procedures which have an EGD and a colonoscopy</p>
+<pre class="r"><code>cscopy %&gt;% get_tag_density_information(tag=&quot;surg_bun_t_egd&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_egd&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 172</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-16-2.png" width="672" /></p>
+<p>these are clearly different. If a patient has an EGD and a colonoscopy, they are being charged much more than if there was no EGD.</p>
+<pre class="r"><code>cscopy_with_egd &lt;- cscopy[surg_bun_t_egd ==T]
+cscopy &lt;- cscopy[surg_bun_t_egd ==F]</code></pre>
+<p>Lets now once again examine the distribution and examine any correlated tags</p>
+<pre class="r"><code>cscopy %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+<pre class="r"><code>cscopy %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 467 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 surg_bun_t_sub               0.295
+##  2 surg_bun_t_remov             0.291
+##  3 surg_bun_t_njx               0.290
+##  4 surg_bun_t_removal           0.282
+##  5 surg_bun_t_lesion            0.278
+##  6 path_bun_t_patho             0.232
+##  7 path_bun_t_pathologist       0.232
+##  8 path_bun_t_tissue            0.232
+##  9 surg_bun_t_diagnostic        0.221
+## 10 anes_bun_t_mod_sed           0.202
+## # ... with 457 more rows</code></pre>
+<p>now lets examine the colonoscopies with lesion removal</p>
+<pre class="r"><code>cscopy %&gt;% get_tag_density_information(tag=&quot;surg_bun_t_lesion&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_lesion&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 139</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-19-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-19-2.png" width="672" />
+There is strong evidence to remove split these procedures into separate groups. While the Doctor and/or patient may not know if a lesion will be removed prior to surgery, there is a price difference. This will help with post procedure customer analyis.</p>
+<pre class="r"><code>cscopy_with_lesion &lt;- cscopy[surg_bun_t_lesion ==T]
+cscopy &lt;- cscopy[surg_bun_t_lesion ==F]</code></pre>
+<p>check distribution and correlated tags</p>
+<pre class="r"><code>cscopy %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
+<pre class="r"><code>cscopy %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 427 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 anes_bun_t_anesth            0.257
+##  2 anes_bun_t_surg              0.240
+##  3 medi_bun_t_sodium            0.212
+##  4 anes_bun_t_anes              0.201
+##  5 path_bun_t_patho             0.190
+##  6 path_bun_t_pathologist       0.190
+##  7 path_bun_t_tissue            0.190
+##  8 faci_bun_t_dept              0.182
+##  9 faci_bun_t_emergency         0.182
+## 10 surg_bun_t_remov             0.182
+## # ... with 417 more rows</code></pre>
+<pre class="r"><code>cscopy %&gt;% get_tag_density_information(&quot;medi_bun_t_inject&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ medi_bun_t_inject&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 88.1</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-22-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-22-2.png" width="672" /></p>
+<p>weak evidence to split based on injection, so for now we will not split. Lets check the tissue pathology next</p>
+<pre class="r"><code>cscopy %&gt;% get_tag_density_information(tag=&quot;path_bun_t_tissue&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ path_bun_t_tissue&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 78.3</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-23-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-23-2.png" width="672" /></p>
+<p>There is strong evidence to split based upon whether a tissue pathology was conducted. This also passes a gut check since if a tissue had a pathology procedure that it would have cost more to the patient.</p>
+<pre class="r"><code>cscopy_with_tissue&lt;- cscopy[path_bun_t_tissue ==T]
+cscopy &lt;- cscopy[path_bun_t_tissue ==F]</code></pre>
+<pre class="r"><code>cscopy %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-25-1.png" width="672" /></p>
+<pre class="r"><code>cscopy %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 342 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 faci_bun_t_dept              0.274
+##  2 faci_bun_t_emergency         0.274
+##  3 anes_bun_t_anesth            0.251
+##  4 anes_bun_t_surg              0.225
+##  5 anes_bun_t_anes              0.224
+##  6 faci_bun_t_discharge         0.212
+##  7 faci_bun_t_initial           0.190
+##  8 faci_bun_t_care              0.187
+##  9 faci_bun_t_observation       0.186
+## 10 surg_bun_t_remov             0.184
+## # ... with 332 more rows</code></pre>
+<p>lets check for colonoscopies at the emergency department</p>
+<pre class="r"><code>cscopy %&gt;% get_tag_density_information(tag=&quot;faci_bun_t_emergency&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ faci_bun_t_emergency&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 581</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-26-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-26-2.png" width="672" />
+There is strong evidence that a colonoscopy at the emergency department costs much more than one not at an emergency department, however the frequency is not high, so it will not be a serparate searchable category.</p>
+<pre class="r"><code>cscopy_at_emerg &lt;-  cscopy[faci_bun_t_emergency==T]
+cscopy &lt;-  cscopy[faci_bun_t_emergency==F]</code></pre>
+<pre class="r"><code>cscopy %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-28-1.png" width="672" /></p>
+<pre class="r"><code>cscopy %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 333 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 anes_bun_t_anesth        0.271
+##  2 anes_bun_t_anes          0.250
+##  3 anes_bun_t_surg          0.243
+##  4 surg_bun_t_remov         0.2  
+##  5 surg_bun_t_anal          0.194
+##  6 surg_bun_t_remove        0.184
+##  7 medi_bun_t_sodium        0.180
+##  8 surg_bun_t_repair        0.156
+##  9 surg_bun_t_complex       0.147
+## 10 surg_bun_t_tags          0.140
+## # ... with 323 more rows</code></pre>
+<p>lets remove some obviously non standard additional procedures</p>
+<pre class="r"><code>cscopy &lt;- cscopy[surg_bun_t_anal==F &amp; surg_bun_t_finger==F &amp; anes_bun_t_hernia==F &amp; surg_bun_t_pharynx==F &amp; surg_bun_t_hernia ==F &amp; surg_bun_t_anal==F &amp; surg_bun_t_lap==F ]</code></pre>
+<pre class="r"><code>cscopy %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-30-1.png" width="672" />
+We are now happy with this distribution and values for the standard colonoscopy.
+Now we will group the bundles by the facility, and doctor pairs based upon the NPI database.</p>
+<pre class="r"><code>cscopy_btbv4 &lt;-  cscopy %&gt;% btbv4()</code></pre>
+<p>For colonoscopies, we will only show those which performed at least 25 surgeries.</p>
+<pre class="r"><code>cscopy_btbv4 &lt;- cscopy_btbv4 %&gt;% 
+ arrange(most_important_fac) %&gt;% 
+  filter(tp_cnt_cnt&gt;9) %&gt;%
+  select(doctor_str1,
+         doctor_str2,
+         doctor_npi_str1,
+         doctor_npi_str2,
+         most_important_fac,
+         most_important_fac_npi,
+         tp_med_med,
+         tp_med_surg,
+         tp_med_medi,
+         tp_med_path,
+         tp_med_radi,
+         tp_med_anes,
+         tp_med_faci,
+         tp_cnt_cnt) %&gt;%
+  mutate(procedure_type = 1,
+         procedure_modifier = &quot;Standard&quot;)</code></pre>
+<pre class="r"><code>cscopy_btbv4 %&gt;% as.data.frame()%&gt;% count(doctor_str1,doctor_str2, most_important_fac) %&gt;% filter(n&gt;1)</code></pre>
+<pre><code>## [1] doctor_str1        doctor_str2        most_important_fac n                 
+## &lt;0 rows&gt; (or 0-length row.names)</code></pre>
+</div>
+<div id="b.-egd" class="section level2">
+<h2>B. EGD</h2>
+<pre class="r"><code>cscopy_with_egd %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-34-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_egd %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 355 x 2
+##    name                  correlation
+##    &lt;chr&gt;                       &lt;dbl&gt;
+##  1 medi_bun_t_sodium           0.306
+##  2 surg_bun_t_small            0.27 
+##  3 surg_bun_t_bowel            0.270
+##  4 surg_bun_t_endoscopy        0.270
+##  5 surg_bun_t_endo             0.255
+##  6 medi_bun_t_inject           0.226
+##  7 surg_bun_t_diagnostic       0.224
+##  8 anes_bun_t_anes             0.147
+##  9 path_bun_t_test             0.142
+## 10 path_bun_t_patho            0.139
+## # ... with 345 more rows</code></pre>
+<pre class="r"><code>cscopy_with_egd %&gt;% get_tag_density_information(&quot;medi_bun_t_sodium&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ medi_bun_t_sodium&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 295</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-36-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-36-2.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_edg_with_sodium &lt;-  cscopy_with_egd[medi_bun_t_sodium==T]
+cscopy_with_egd &lt;- cscopy_with_egd[medi_bun_t_sodium==F]</code></pre>
+<pre class="r"><code>cscopy_with_egd %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 342 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 surg_bun_t_diagnostic        0.207
+##  2 medi_bun_t_inject            0.175
+##  3 anes_bun_t_mod_sed           0.158
+##  4 surg_bun_t_remov             0.151
+##  5 surg_bun_t_removal           0.150
+##  6 surg_bun_t_lesion            0.15 
+##  7 surg_bun_t_njx               0.141
+##  8 surg_bun_t_sub               0.140
+##  9 path_bun_t_patho             0.136
+## 10 path_bun_t_pathologist       0.136
+## # ... with 332 more rows</code></pre>
+</div>
+<div id="c.-lesion-removal" class="section level2">
+<h2>C. Lesion Removal</h2>
+<p>We will now break down the Colonoscopy with Lesion Removal Category down into appropriate categories.</p>
+<p>lets check the dist and correlated tags</p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-39-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 323 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 surg_bun_t_sub             0.341
+##  2 surg_bun_t_njx             0.337
+##  3 anes_bun_t_mod_sed         0.301
+##  4 surg_bun_t_biopsy          0.297
+##  5 medi_bun_t_inject          0.236
+##  6 surg_bun_t_resect          0.178
+##  7 anes_bun_t_anesth          0.107
+##  8 faci_bun_t_dept            0.105
+##  9 faci_bun_t_emergency       0.105
+## 10 anes_bun_t_surg            0.105
+## # ... with 313 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion %&gt;% get_tag_density_information(&quot;medi_bun_t_inject&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ medi_bun_t_inject&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 216</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-40-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-40-2.png" width="672" />
+we have strong evidence to create a new group for cscopy with a lesion removal with an injection.</p>
+<pre class="r"><code>cscopy_with_lesion_with_injection &lt;- cscopy_with_lesion[medi_bun_t_inject==T]
+cscopy_with_lesion &lt;-  cscopy_with_lesion[medi_bun_t_inject==F]</code></pre>
+<p>lets check the dist and correlated tags</p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-42-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 275 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 surg_bun_t_sub            0.256 
+##  2 surg_bun_t_njx            0.254 
+##  3 surg_bun_t_biopsy         0.254 
+##  4 anes_bun_t_anes           0.145 
+##  5 faci_bun_t_dept           0.128 
+##  6 faci_bun_t_emergency      0.128 
+##  7 faci_bun_t_hospital       0.116 
+##  8 anes_bun_t_mod_sed        0.115 
+##  9 faci_bun_t_care           0.0962
+## 10 faci_bun_t_initial        0.0962
+## # ... with 265 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion %&gt;% get_tag_density_information(&quot;surg_bun_t_biopsy&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_biopsy&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 150</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-43-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-43-2.png" width="672" />
+There is strong evidence that a lesion removal with a biopsy should be a separate procedure.</p>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy &lt;- cscopy_with_lesion[surg_bun_t_biopsy==T]
+cscopy_with_lesion &lt;-  cscopy_with_lesion[surg_bun_t_biopsy==F]</code></pre>
+<p>lets check the dist and correlated tags</p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-45-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 231 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 surg_bun_t_sub             0.269
+##  2 surg_bun_t_njx             0.263
+##  3 faci_bun_t_dept            0.204
+##  4 faci_bun_t_emergency       0.204
+##  5 anes_bun_t_anes            0.180
+##  6 faci_bun_t_hospital        0.168
+##  7 anes_bun_t_anesth          0.139
+##  8 surg_bun_t_sheath          0.134
+##  9 surg_bun_t_tendon          0.134
+## 10 surg_bun_t_endo            0.131
+## # ... with 221 more rows</code></pre>
+<p>the njx tag is picking up is “Egd us transmural injxn/mark” or “Colonoscopy submucous njx”</p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% get_tag_density_information(&quot;surg_bun_t_sub&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_sub&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 408</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-46-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-46-2.png" width="672" />
+while there is a legitimate difference, it is not a large enough sample to warrant a separate procedure options</p>
+<pre class="r"><code>cscopy_with_lesion &lt;-  cscopy_with_lesion[surg_bun_t_sub==F]</code></pre>
+<p>lets check the dist and correlated tags</p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-48-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 222 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 anes_bun_t_anes            0.211
+##  2 faci_bun_t_dept            0.198
+##  3 faci_bun_t_emergency       0.198
+##  4 surg_bun_t_sheath          0.153
+##  5 surg_bun_t_tendon          0.153
+##  6 surg_bun_t_endo            0.150
+##  7 surg_bun_t_block           0.148
+##  8 medi_bun_t_add-on          0.144
+##  9 medi_bun_t_hydrate         0.144
+## 10 medi_bun_t_observ          0.144
+## # ... with 212 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion %&gt;% get_tag_density_information(&quot;faci_bun_t_emergency&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ faci_bun_t_emergency&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 518</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-49-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-49-2.png" width="672" />
+not a large enough sample to warrant a split.</p>
+<pre class="r"><code>cscopy_with_lesion &lt;- cscopy_with_lesion[faci_bun_t_emergency==F]</code></pre>
+<p>lets check the dist and correlated tags</p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-51-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 205 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 anes_bun_t_anes          0.206
+##  2 surg_bun_t_sheath        0.157
+##  3 surg_bun_t_tendon        0.157
+##  4 surg_bun_t_endo          0.154
+##  5 surg_bun_t_block         0.152
+##  6 anes_bun_t_anesth        0.131
+##  7 anes_bun_t_mod_sed       0.129
+##  8 surg_bun_t_eye           0.128
+##  9 radi_bun_t_guide         0.116
+## 10 surg_bun_t_remove        0.115
+## # ... with 195 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion &lt;- cscopy_with_lesion[surg_bun_t_sheath==F &amp; surg_bun_t_block==F &amp; surg_bun_t_eye==F &amp; surg_bun_t_cystoscopy==F]</code></pre>
+<pre class="r"><code>cscopy_with_lesion  %&gt;% get_tag_density_information(&quot;path_bun_t_patho&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ path_bun_t_patho&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 80.1</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-53-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-53-2.png" width="672" />
+Not justified to split</p>
+<p>lets check the dist and correlated tags</p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-54-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 198 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 anes_bun_t_anes          0.182 
+##  2 anes_bun_t_mod_sed       0.130 
+##  3 medi_bun_t_normal        0.105 
+##  4 medi_bun_t_saline        0.105 
+##  5 medi_bun_t_solution      0.105 
+##  6 path_bun_t_agent         0.0698
+##  7 path_bun_t_reagent       0.0698
+##  8 surg_bun_t_endo          0.0628
+##  9 surg_bun_t_esoph         0.0628
+## 10 surg_bun_t_exam          0.0628
+## # ... with 188 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion_btbv4 &lt;- cscopy_with_lesion %&gt;% btbv4()</code></pre>
+<pre class="r"><code>cscopy_with_lesion_btbv4 &lt;- cscopy_with_lesion_btbv4 %&gt;% 
+  filter(tp_cnt_cnt&gt;5) %&gt;% 
+  select(doctor_str1,
+         doctor_str2,
+         doctor_npi_str1,
+         doctor_npi_str2,
+         most_important_fac,
+         most_important_fac_npi,
+         tp_med_med,
+         tp_med_surg,
+         tp_med_medi,
+         tp_med_path,
+         tp_med_radi,
+         tp_med_anes,
+         tp_med_faci,
+         tp_cnt_cnt) %&gt;%
+  mutate(procedure_type = 1,
+         procedure_modifier = &quot;Lesion Removal&quot;)
+
+cscopy_with_lesion_btbv4</code></pre>
+<pre><code>##                 doctor_str1           doctor_str2 doctor_npi_str1
+##   1:          KURT O BODILY                  &lt;NA&gt;      1780600312
+##   2:         JOHN C CAPENER                  &lt;NA&gt;      1750355624
+##   3:        CASEY RAY OWENS                  &lt;NA&gt;      1437348943
+##   4:           VIKRAM  GARG                  &lt;NA&gt;      1760491054
+##   5:  ALLEN CLARK GUNNERSON                  &lt;NA&gt;      1407081524
+##  ---                                                             
+## 226: STEVEN GREGG DESAUTELS                  &lt;NA&gt;      1790891430
+## 227:         C DAVID HANSEN MATTHEW EDWARD FEURER      1548366743
+## 228:          NOT SPECIFIED                  &lt;NA&gt;               0
+## 229:         DAVID J FRANTZ   MATTHEW G. OLLERTON      1700092004
+## 230:          KURT O BODILY       TROY  LUNCEFORD      1780600312
+##      doctor_npi_str2                                   most_important_fac
+##   1:            &lt;NA&gt;                CENTRAL UTAH SURGICAL CENTER  (PROVO)
+##   2:            &lt;NA&gt;             IHC HEALTH SERVICES  (RIVERTON HOSPITAL)
+##   3:            &lt;NA&gt;                 CENTRAL UTAH CLINIC  (REVERE HEALTH)
+##   4:            &lt;NA&gt;       IHC HEALTH SERVICES  (LOGAN REGIONAL HOSPITAL)
+##   5:            &lt;NA&gt; IHC HEALTH SERVICES  (DIXIE REGIONAL MEDICAL CENTER)
+##  ---                                                                     
+## 226:            &lt;NA&gt;                                        NOT SPECIFIED
+## 227:      1508157942                  IHC HEALTH SERVICES  (LDS HOSPITAL)
+## 228:            &lt;NA&gt;                 DIABETES RELIEF UTAH OGDEN  (LAYTON)
+## 229:      1518959733        IHC HEALTH SERVICES  (AMERICAN FORK HOSPITAL)
+## 230:      1194842286          IHC HEALTH SERVICES  (UTAH VALLEY HOSPITAL)
+##      most_important_fac_npi tp_med_med tp_med_surg tp_med_medi tp_med_path
+##   1:             1962463950   1153.580    1043.365      51.050       0.000
+##   2:             1154551919   2002.390    1214.882       9.675     130.725
+##   3:             1437205028    979.300     884.890       0.000      79.470
+##   4:             1831108497   2146.510    1669.920     140.910     211.420
+##   5:             1366452880   3944.450    2851.970      64.175     183.280
+##  ---                                                                      
+## 226:                      0   1536.175     938.020       0.000     111.630
+## 227:             1528078581   1614.750    1245.030      57.740      90.730
+## 228:             1619402799    949.720     377.720     329.870      92.700
+## 229:             1912014358   1677.710    1591.950       0.000       0.000
+## 230:             1114025491   2057.230    1672.360       0.000     126.860
+##      tp_med_radi tp_med_anes tp_med_faci tp_cnt_cnt procedure_type
+##   1:           0      59.165      0.0000         13              1
+##   2:           0       0.000    672.2075        350              1
+##   3:           0      14.940      0.0000         31              1
+##   4:           0       0.000     65.1100       1021              1
+##   5:           0       0.000   1005.2200        430              1
+##  ---                                                              
+## 226:           0     486.525      0.0000          6              1
+## 227:           0       0.000    221.2500          9              1
+## 228:           0      15.100    134.3300          9              1
+## 229:           0       0.000     85.7600          7              1
+## 230:           0      15.310    242.7000          9              1
+##      procedure_modifier
+##   1:     Lesion Removal
+##   2:     Lesion Removal
+##   3:     Lesion Removal
+##   4:     Lesion Removal
+##   5:     Lesion Removal
+##  ---                   
+## 226:     Lesion Removal
+## 227:     Lesion Removal
+## 228:     Lesion Removal
+## 229:     Lesion Removal
+## 230:     Lesion Removal</code></pre>
+<div id="injection" class="section level3">
+<h3>1. injection</h3>
+<p>lets break down the lesion removal with an injection</p>
+<pre class="r"><code>cscopy_with_lesion_with_injection %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 236 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 surg_bun_t_sub           0.415
+##  2 surg_bun_t_njx           0.411
+##  3 anes_bun_t_mod_sed       0.392
+##  4 surg_bun_t_biopsy        0.331
+##  5 surg_bun_t_resect        0.217
+##  6 anes_bun_t_anesth        0.140
+##  7 anes_bun_t_surg          0.140
+##  8 radi_bun_t_view          0.124
+##  9 surg_bun_t_remove        0.115
+## 10 medi_bun_t_choline       0.108
+## # ... with 226 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion_with_injection %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-57-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_with_injection %&gt;% get_tag_density_information(&quot;surg_bun_t_sub&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_sub&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 337</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-58-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-58-2.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_with_injection &lt;-  cscopy_with_lesion_with_injection[surg_bun_t_sub==F]</code></pre>
+<pre class="r"><code>cscopy_with_lesion_with_injection %&gt;% get_tag_density_information(&quot;surg_bun_t_biopsy&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_biopsy&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 207</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-60-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-60-2.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_biopsy_injection &lt;- cscopy_with_lesion_with_injection[surg_bun_t_biopsy==T]
+cscopy_with_lesion_with_injection &lt;- cscopy_with_lesion_with_injection[surg_bun_t_biopsy==F]</code></pre>
+<pre class="r"><code>cscopy_with_lesion_with_injection %&gt;%  get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 135 x 2
+##    name               correlation
+##    &lt;chr&gt;                    &lt;dbl&gt;
+##  1 surg_bun_t_resect        0.308
+##  2 anes_bun_t_anesth        0.256
+##  3 anes_bun_t_surg          0.256
+##  4 anes_bun_t_mod_sed       0.244
+##  5 anes_bun_t_anes          0.236
+##  6 surg_bun_t_remove        0.205
+##  7 surg_bun_t_endo          0.195
+##  8 surg_bun_t_tendon        0.195
+##  9 surg_bun_t_wrist         0.195
+## 10 anes_bun_t_lower         0.195
+## # ... with 125 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion_with_injection %&gt;% get_tag_density_information(&quot;surg_bun_t_remove&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_remove&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 975</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-63-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-63-2.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_with_injection &lt;- cscopy_with_lesion_with_injection[surg_bun_t_resect==F &amp; surg_bun_t_remove==F &amp; medi_bun_t_normal==F ]</code></pre>
+<pre class="r"><code>cscopy_with_lesion_with_injection %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-65-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_with_injection_bundle &lt;-  cscopy_with_lesion_with_injection %&gt;% btbv4()</code></pre>
+<pre class="r"><code># cscopy_with_lesion_with_injection_bundle %&gt;% View()</code></pre>
+<pre class="r"><code># cscopy_with_lesion_with_injection_bundle %&gt;% saveRDS(&quot;dash_colonoscopy_lesion_injection.RDS&quot;)</code></pre>
+</div>
+<div id="biopsy" class="section level3">
+<h3>2. biopsy</h3>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 186 x 2
+##    name                correlation
+##    &lt;chr&gt;                     &lt;dbl&gt;
+##  1 surg_bun_t_njx           0.245 
+##  2 surg_bun_t_sub           0.245 
+##  3 anes_bun_t_mod_sed       0.139 
+##  4 surg_bun_t_ligation      0.118 
+##  5 duration_mean            0.117 
+##  6 surg_bun_t_control       0.113 
+##  7 duration_max             0.0995
+##  8 surg_bun_t_dura          0.0962
+##  9 anes_bun_t_anes          0.0858
+## 10 faci_bun_t_care          0.0855
+## # ... with 176 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-69-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy %&gt;% get_tag_density_information(&quot;surg_bun_t_njx&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ surg_bun_t_njx&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 407</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-70-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-70-2.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy &lt;- cscopy_with_lesion_and_biopsy[surg_bun_t_njx==F &amp; surg_bun_t_sub==F]</code></pre>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy %&gt;% get_tag_density_information(&quot;path_bun_t_patho&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ path_bun_t_patho&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 338</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-72-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-72-2.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy &lt;-  cscopy_with_lesion_and_biopsy[path_bun_t_patho==T]</code></pre>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy &lt;- cscopy_with_lesion_and_biopsy[path_bun_t_metabolic==F &amp; faci_bun_t_emergency==F]</code></pre>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 167 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 anes_bun_t_mod_sed           0.174 
+##  2 anes_bun_t_anes              0.0972
+##  3 surg_bun_t_resect            0.0952
+##  4 surg_bun_t_control           0.0851
+##  5 surg_bun_t_hemorrhoid        0.0783
+##  6 surg_bun_t_ligation          0.0783
+##  7 path_bun_t_sex               0.0613
+##  8 path_bun_t_testosterone      0.0613
+##  9 surg_bun_t_breast            0.0608
+## 10 medi_bun_t_stud              0.0602
+## # ... with 157 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-75-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy %&gt;% get_tag_density_information(&quot;anes_bun_t_mod_sed&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_mod_sed&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 263</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-76-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-76-2.png" width="672" />
+there is strong evidence to split those groups into two.</p>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy_and_mod_sed &lt;-  cscopy_with_lesion_and_biopsy[anes_bun_t_mod_sed==T]
+cscopy_with_lesion_and_biopsy &lt;- cscopy_with_lesion_and_biopsy[anes_bun_t_mod_sed==F]</code></pre>
+<p>lets check the dist and correlated tags</p>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 146 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 surg_bun_t_resect            0.131 
+##  2 anes_bun_t_anes              0.111 
+##  3 path_bun_t_immunohisto       0.0857
+##  4 path_bun_t_immuno            0.0837
+##  5 path_bun_t_hormone           0.0738
+##  6 path_bun_t_sex               0.0737
+##  7 path_bun_t_testosterone      0.0737
+##  8 surg_bun_t_breast            0.0731
+##  9 faci_bun_t_est               0.0577
+## 10 medi_bun_t_evaluat           0.0571
+## # ... with 136 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-78-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy &lt;-  cscopy_with_lesion_and_biopsy[surg_bun_t_resect==F &amp; path_bun_t_immuno==F &amp; path_bun_t_hormone==F &amp; path_bun_t_sex==F &amp; surg_bun_t_breast==F]</code></pre>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy2 &lt;- cscopy_with_lesion_and_biopsy</code></pre>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy_btbv4 &lt;- cscopy_with_lesion_and_biopsy %&gt;% btbv4()</code></pre>
+<pre class="r"><code>cscopy_with_lesion_and_biopsy_btbv4 &lt;- cscopy_with_lesion_and_biopsy_btbv4 %&gt;% 
+  filter(tp_cnt_cnt&gt;5) %&gt;%
+  arrange(most_important_fac) %&gt;% 
+  select(doctor_str1,
+         doctor_str2,
+         doctor_npi_str1,
+         doctor_npi_str2,
+         most_important_fac,
+         most_important_fac_npi,
+         tp_med_med,
+         tp_med_surg,
+         tp_med_medi,
+         tp_med_path,
+         tp_med_radi,
+         tp_med_anes,
+         tp_med_faci,
+         tp_cnt_cnt) %&gt;% 
+  mutate(procedure_type = 1,
+         procedure_modifier = &quot;Lesion Removal AND Biopsy&quot;)
+cscopy_with_lesion_and_biopsy_btbv4</code></pre>
+<pre><code>##               doctor_str1     doctor_str2 doctor_npi_str1 doctor_npi_str2
+##   1:        NOT SPECIFIED            &lt;NA&gt;               0            &lt;NA&gt;
+##   2:  CHRISTOPHER  CANALE            &lt;NA&gt;      1598952145            &lt;NA&gt;
+##   3:  DAVID RAYBURN MOORE            &lt;NA&gt;      1215969837            &lt;NA&gt;
+##   4:        BRETT W DOXEY            &lt;NA&gt;      1386775682            &lt;NA&gt;
+##   5:  DAVID RAYBURN MOORE ERIC C JOHNSTON      1215969837      1407997273
+##  ---                                                                     
+## 191:     PEDER J PEDERSEN            &lt;NA&gt;      1568558211            &lt;NA&gt;
+## 192:        JASON C WILLS            &lt;NA&gt;      1871689554            &lt;NA&gt;
+## 193:         HOLLY  CLARK            &lt;NA&gt;      1376639047            &lt;NA&gt;
+## 194: TIMOTHY C HOLLINGSED            &lt;NA&gt;      1790716181            &lt;NA&gt;
+## 195:        NOT SPECIFIED            &lt;NA&gt;               0            &lt;NA&gt;
+##                                    most_important_fac most_important_fac_npi
+##   1:                  BEAVER VALLEY HOSPITAL (BEAVER)             1174979108
+##   2:            BOUNTIFUL SURGERY CENTER  (BOUNTIFUL)             1669415451
+##   3:            BOUNTIFUL SURGERY CENTER  (BOUNTIFUL)             1669415451
+##   4:            BOUNTIFUL SURGERY CENTER  (BOUNTIFUL)             1669415451
+##   5:            BOUNTIFUL SURGERY CENTER  (BOUNTIFUL)             1669415451
+##  ---                                                                        
+## 191:    WASATCH ENDOSCOPY CENTER LTD (SALT LAKE CITY)             1881701290
+## 192:    WASATCH ENDOSCOPY CENTER LTD (SALT LAKE CITY)             1881701290
+## 193:    WASATCH ENDOSCOPY CENTER LTD (SALT LAKE CITY)             1881701290
+## 194: WASATCH FRONT SURGERY CENTER  (WEST VALLEY CITY)             1063720365
+## 195: WASATCH FRONT SURGERY CENTER  (WEST VALLEY CITY)             1063720365
+##      tp_med_med tp_med_surg tp_med_medi tp_med_path tp_med_radi tp_med_anes
+##   1:   3288.050     1661.53        0.00      544.00           0     550.960
+##   2:   2943.600     2530.56        0.00      198.70           0     303.000
+##   3:   2675.520     2530.56        0.00      273.66           0     260.000
+##   4:   2597.905     2236.86        0.00      161.72           0     199.325
+##   5:   2753.220     2563.51        0.00      136.00           0       0.000
+##  ---                                                                       
+## 191:   2519.240     1910.21        0.00      278.18           0     370.175
+## 192:   2592.370     2091.71        0.00      221.84           0     260.000
+## 193:   3027.790     2319.41        0.00      352.38           0     356.000
+## 194:   3744.220     2658.94       88.20      997.08           0       0.000
+## 195:   2296.840     1691.82        6.61      598.41           0       0.000
+##      tp_med_faci tp_cnt_cnt procedure_type        procedure_modifier
+##   1:      531.56          7              1 Lesion Removal AND Biopsy
+##   2:        0.00        111              1 Lesion Removal AND Biopsy
+##   3:        0.00         83              1 Lesion Removal AND Biopsy
+##   4:        0.00         45              1 Lesion Removal AND Biopsy
+##   5:       53.71          6              1 Lesion Removal AND Biopsy
+##  ---                                                                
+## 191:        0.00         59              1 Lesion Removal AND Biopsy
+## 192:        0.00         81              1 Lesion Removal AND Biopsy
+## 193:        0.00         14              1 Lesion Removal AND Biopsy
+## 194:        0.00          6              1 Lesion Removal AND Biopsy
+## 195:        0.00          7              1 Lesion Removal AND Biopsy</code></pre>
+</div>
+<div id="even-more-break-downs." class="section level3">
+<h3>3. Even more break downs.</h3>
+<p>While these are valid break downs, they seems to complex for the average customer to shop for, so I am going to display them, but they will not be in the final tool.</p>
+<pre class="r"><code>cscopy_with_lesion_biopsy_injection %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 198 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 anes_bun_t_mod_sed         0.442
+##  2 surg_bun_t_resect          0.264
+##  3 path_bun_t_panel           0.152
+##  4 path_bun_t_metabolic       0.148
+##  5 path_bun_t_total           0.142
+##  6 surg_bun_t_tags            0.141
+##  7 medi_bun_t_emotional       0.141
+##  8 medi_bun_t_stud            0.141
+##  9 faci_bun_t_dept            0.140
+## 10 faci_bun_t_emergency       0.140
+## # ... with 188 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion_biopsy_injection %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-83-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_biopsy_injection %&gt;% get_tag_density_information(&quot;anes_bun_t_mod_sed&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_mod_sed&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 205</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-84-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-84-2.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_biopsy_injection &lt;-  cscopy_with_lesion_biopsy_injection[surg_bun_t_resect==F] </code></pre>
+<pre class="r"><code>cscopy_with_lesion_biopsy_injection_mod_sed &lt;-  cscopy_with_lesion_biopsy_injection[anes_bun_t_mod_sed==T]
+
+cscopy_with_lesion_biopsy_injection &lt;- cscopy_with_lesion_biopsy_injection[anes_bun_t_mod_sed==F]</code></pre>
+<pre class="r"><code>cscopy_with_lesion_biopsy_injection %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 155 x 2
+##    name                   correlation
+##    &lt;chr&gt;                        &lt;dbl&gt;
+##  1 anes_bun_t_anes              0.305
+##  2 path_bun_t_blood             0.300
+##  3 path_bun_t_panel             0.264
+##  4 path_bun_t_glucose           0.248
+##  5 path_bun_t_metabolic         0.246
+##  6 medi_bun_t_choline           0.244
+##  7 medi_bun_t_device            0.243
+##  8 medi_bun_t_draw              0.243
+##  9 medi_bun_t_haloperidol       0.232
+## 10 anes_bun_t_anesth            0.232
+## # ... with 145 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion_biopsy_injection %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-87-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_lesion_biopsy_injection_mod_sed %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 121 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 surg_bun_t_tags            0.240
+##  2 medi_bun_t_emotional       0.240
+##  3 medi_bun_t_stud            0.240
+##  4 faci_bun_t_dept            0.240
+##  5 faci_bun_t_emergency       0.240
+##  6 path_bun_t_psa             0.210
+##  7 path_bun_t_total           0.192
+##  8 path_bun_t_comprehen       0.181
+##  9 path_bun_t_metabolic       0.181
+## 10 path_bun_t_assay           0.162
+## # ... with 111 more rows</code></pre>
+<pre class="r"><code>cscopy_with_lesion_biopsy_injection_mod_sed %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-88-1.png" width="672" /></p>
+</div>
+</div>
+<div id="d.-tissue-pathology" class="section level2">
+<h2>D. Tissue pathology</h2>
+<p>I will now break down the Colonoscopy with a tissue pathology</p>
+<p>lets look at the distribution and correlated tags</p>
+<pre class="r"><code>cscopy_with_tissue %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-89-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_tissue %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 363 x 2
+##    name                    correlation
+##    &lt;chr&gt;                         &lt;dbl&gt;
+##  1 anes_bun_t_anesth             0.274
+##  2 anes_bun_t_surg               0.261
+##  3 medi_bun_t_sodium             0.238
+##  4 anes_bun_t_anes               0.216
+##  5 anes_bun_t_mod_sed            0.199
+##  6 surg_bun_t_remov              0.197
+##  7 surg_bun_t_remove             0.189
+##  8 faci_bun_t_discharge          0.141
+##  9 surg_bun_t_biopsy             0.139
+## 10 surg_bun_t_appendectomy       0.138
+## # ... with 353 more rows</code></pre>
+<pre class="r"><code>cscopy_with_tissue %&gt;% get_tag_density_information(&quot;anes_bun_t_anesth&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_anesth&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 575</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-90-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-90-2.png" width="672" />
+valid split, but not a large enough grouping to warrant own category.</p>
+<pre class="r"><code>cscopy_with_tissue  &lt;- cscopy_with_tissue[anes_bun_t_anesth == F]</code></pre>
+<p>lets look at the distribution and correlated tags</p>
+<pre class="r"><code>cscopy_with_tissue %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-92-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_tissue %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 339 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 anes_bun_t_mod_sed         0.220
+##  2 anes_bun_t_anes            0.175
+##  3 faci_bun_t_discharge       0.149
+##  4 faci_bun_t_initial         0.144
+##  5 faci_bun_t_dept            0.141
+##  6 faci_bun_t_emergency       0.141
+##  7 medi_bun_t_normal          0.131
+##  8 medi_bun_t_saline          0.131
+##  9 medi_bun_t_solution        0.131
+## 10 medi_bun_t_sodium          0.130
+## # ... with 329 more rows</code></pre>
+<pre class="r"><code>cscopy_with_tissue %&gt;% get_tag_density_information(&quot;anes_bun_t_mod_sed&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ anes_bun_t_mod_sed&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 81.4</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-93-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-93-2.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_tissue_with_mod_sed &lt;-  cscopy_with_tissue[anes_bun_t_mod_sed == T]
+cscopy_with_tissue &lt;- cscopy_with_tissue[anes_bun_t_mod_sed == F]</code></pre>
+<pre class="r"><code>cscopy_with_tissue %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-95-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_tissue %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 295 x 2
+##    name                 correlation
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 anes_bun_t_anes            0.237
+##  2 faci_bun_t_discharge       0.198
+##  3 faci_bun_t_initial         0.191
+##  4 medi_bun_t_normal          0.176
+##  5 medi_bun_t_saline          0.176
+##  6 medi_bun_t_solution        0.176
+##  7 medi_bun_t_sodium          0.170
+##  8 faci_bun_t_dept            0.169
+##  9 faci_bun_t_emergency       0.169
+## 10 faci_bun_t_care            0.162
+## # ... with 285 more rows</code></pre>
+<pre class="r"><code>cscopy_with_tissue %&gt;% get_tag_density_information(&quot;faci_bun_t_hospital&quot;) %&gt;% print()</code></pre>
+<pre><code>## Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+## replace the existing scale.</code></pre>
+<pre><code>## [1] &quot;tp_med ~ faci_bun_t_hospital&quot;</code></pre>
+<pre><code>## Warning in leveneTest.default(y = y, group = group, ...): group coerced to
+## factor.</code></pre>
+<pre><code>## Picking joint bandwidth of 1140</code></pre>
+<pre><code>## $dist_plots</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-96-1.png" width="672" /></p>
+<pre><code>## 
+## $stat_tables</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-96-2.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_tissue &lt;-  cscopy_with_tissue[faci_bun_t_initial==F &amp; medi_bun_t_normal==F &amp; faci_bun_t_discharge==F &amp; faci_bun_t_emergency==F &amp; faci_bun_t_hospital==F &amp; medi_bun_t_sodium==F &amp; surg_bun_t_resect==F &amp; path_bun_t_panel==F &amp; surg_bun_t_anal==F &amp; surg_bun_t_destroy==F &amp; medi_bun_t_wheezing==F &amp; surg_bun_t_nasal == F &amp; path_bun_t_hiv==F &amp; path_bun_t_allerg==F &amp; path_bun_t_pregnancy==F &amp; surg_bun_t_dilat==F]</code></pre>
+<pre class="r"><code>cscopy_with_tissue %&gt;% plot_med_density() %&gt;% print()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/colonoscopy_files/figure-html/unnamed-chunk-98-1.png" width="672" /></p>
+<pre class="r"><code>cscopy_with_tissue %&gt;% get_tag_cor() %&gt;% print()</code></pre>
+<pre><code>## Warning in stats::cor(cor_data): the standard deviation is zero</code></pre>
+<pre><code>## # A tibble: 211 x 2
+##    name                          correlation
+##    &lt;chr&gt;                               &lt;dbl&gt;
+##  1 anes_bun_t_anes                    0.237 
+##  2 surg_bun_t_njx                     0.0881
+##  3 surg_bun_t_sub                     0.0824
+##  4 medi_bun_t_tracing                 0.0642
+##  5 faci_bun_t_est                     0.0608
+##  6 medi_bun_t_methylprednisolone      0.0604
+##  7 medi_bun_t_prednisolone            0.0604
+##  8 path_bun_t_gene                    0.0604
+##  9 surg_bun_t_control                 0.0597
+## 10 faci_bun_t_visit                   0.0579
+## # ... with 201 more rows</code></pre>
+<pre class="r"><code>cscopy_with_tissue_btbv4 &lt;- cscopy_with_tissue %&gt;% btbv4()</code></pre>
+<pre class="r"><code>cscopy_with_tissue_btbv4 &lt;- cscopy_with_tissue_btbv4 %&gt;% 
+  filter(tp_cnt_cnt&gt;5) %&gt;%
+  arrange(most_important_fac) %&gt;% 
+  select(doctor_str1,
+         doctor_str2,
+         doctor_npi_str1,
+         doctor_npi_str2,
+         most_important_fac,
+         most_important_fac_npi,
+         tp_med_med,
+         tp_med_surg,
+         tp_med_medi,
+         tp_med_path,
+         tp_med_radi,
+         tp_med_anes,
+         tp_med_faci,
+         tp_cnt_cnt) %&gt;% 
+  mutate(procedure_type = 1,
+         procedure_modifier = &quot;Tissue Pathology&quot;)
+cscopy_with_tissue_btbv4</code></pre>
+<pre><code>##                   doctor_str1         doctor_str2 doctor_npi_str1
+##   1:            NOT SPECIFIED                &lt;NA&gt;               0
+##   2:    MARIO DAMON LA GIGLIA                &lt;NA&gt;      1013145697
+##   3:      CHRISTOPHER  CANALE                &lt;NA&gt;      1598952145
+##   4:      DAVID RAYBURN MOORE                &lt;NA&gt;      1215969837
+##   5:      DAVID RAYBURN MOORE      JOHN E ROBISON      1215969837
+##  ---                                                             
+## 313:  CHRISTOPHER IAN MAXWELL                &lt;NA&gt;      1114107026
+## 314:            NOT SPECIFIED                &lt;NA&gt;               0
+## 315: DAVID BRADLEY TROWBRIDGE DOUGLAS MARR WOSETH      1134215809
+## 316:     TIMOTHY C HOLLINGSED                &lt;NA&gt;      1790716181
+## 317:           DAVID  OELSNER                &lt;NA&gt;      1396760765
+##      doctor_npi_str2                               most_important_fac
+##   1:            &lt;NA&gt;                  BEAVER VALLEY HOSPITAL (BEAVER)
+##   2:            &lt;NA&gt;                BLUE MOUNTAIN HOSPITAL (BLANDING)
+##   3:            &lt;NA&gt;            BOUNTIFUL SURGERY CENTER  (BOUNTIFUL)
+##   4:            &lt;NA&gt;            BOUNTIFUL SURGERY CENTER  (BOUNTIFUL)
+##   5:      1629187638            BOUNTIFUL SURGERY CENTER  (BOUNTIFUL)
+##  ---                                                                 
+## 313:            &lt;NA&gt;    WASATCH ENDOSCOPY CENTER LTD (SALT LAKE CITY)
+## 314:            &lt;NA&gt;    WASATCH ENDOSCOPY CENTER LTD (SALT LAKE CITY)
+## 315:      1619978970    WASATCH ENDOSCOPY CENTER LTD (SALT LAKE CITY)
+## 316:            &lt;NA&gt; WASATCH FRONT SURGERY CENTER  (WEST VALLEY CITY)
+## 317:            &lt;NA&gt; WASATCH FRONT SURGERY CENTER  (WEST VALLEY CITY)
+##      most_important_fac_npi tp_med_med tp_med_surg tp_med_medi tp_med_path
+##   1:             1174979108   3070.698    1580.175     14.5200     384.960
+##   2:             1558513812   2086.440    1357.330      0.0000     212.120
+##   3:             1669415451   1774.150    1614.010      0.0000      93.390
+##   4:             1669415451   2034.560    1586.510      0.0000      99.455
+##   5:             1669415451   2555.180    1675.820      0.0000     332.760
+##  ---                                                                      
+## 313:             1881701290   1835.383    1500.368     35.0125     114.915
+## 314:             1881701290   1742.380    1402.350      0.0000      80.030
+## 315:             1881701290   2428.740    1740.990      0.0000     261.820
+## 316:             1063720365   2804.175    2244.540     88.2000     471.435
+## 317:             1063720365   2005.770    1280.000      0.0000     725.770
+##      tp_med_radi tp_med_anes tp_med_faci tp_cnt_cnt procedure_type
+##   1:           0    498.3950      515.02         52              1
+##   2:           0      0.0000      516.99          7              1
+##   3:           0    276.7500        0.00         71              1
+##   4:           0    353.5000      112.01        132              1
+##   5:           0    400.0000      146.60          6              1
+##  ---                                                              
+## 313:           0    185.0875        0.00         42              1
+## 314:           0    260.0000        0.00         16              1
+## 315:           0    320.0000      105.93          6              1
+## 316:           0      0.0000        0.00         13              1
+## 317:           0      0.0000        0.00          6              1
+##      procedure_modifier
+##   1:   Tissue Pathology
+##   2:   Tissue Pathology
+##   3:   Tissue Pathology
+##   4:   Tissue Pathology
+##   5:   Tissue Pathology
+##  ---                   
+## 313:   Tissue Pathology
+## 314:   Tissue Pathology
+## 315:   Tissue Pathology
+## 316:   Tissue Pathology
+## 317:   Tissue Pathology</code></pre>
+<pre class="r"><code>cscopy_final &lt;- cscopy_btbv4 %&gt;%
+  rbind(cscopy_with_lesion_btbv4) %&gt;%
+  rbind(cscopy_with_lesion_and_biopsy_btbv4) %&gt;% 
+  rbind(cscopy_with_tissue_btbv4)</code></pre>
+<pre class="r"><code>cscopy_final %&gt;% saveRDS(&quot;cscopy_final.RDS&quot;)</code></pre>
+<pre class="r"><code>cscopy_final %&gt;% nrow()</code></pre>
+<pre><code>## [1] 1012</code></pre>
+<pre class="r"><code>cscopy_final %&gt;% count(doctor_str2) %&gt;% arrange(desc(n))</code></pre>
+<pre><code>##                doctor_str2   n
+##   1:                  &lt;NA&gt; 853
+##   2: MOHAMMAD M ALSOLAIMAN   5
+##   3:    PETER C. O. FENTON   5
+##   4: MATTHEW EDWARD FEURER   4
+##   5:        JOHN E ROBISON   3
+##  ---                          
+## 114:       VERNON J COOLEY   1
+## 115:     WALSTIR H FONSECA   1
+## 116:    WALTER H. REICHERT   1
+## 117:     WAYNE W MORTENSEN   1
+## 118:  ZAHABIA TAHER GANDHI   1</code></pre>
+<p>946 bundles.
+71 rows</p>
+<pre class="r"><code>cscopy_final_bq &lt;- cscopy_final[,
+                     primary_doctor := pmap(.l=list(doctor_npi1=doctor_npi_str1,
+                                  doctor_npi2=doctor_npi_str2,
+                                  class_reqs=&quot;Internal Medicine|||Colon &amp; Rectal Surgery&quot;,
+                                  specialization_reqs=&quot;Gastroenterology&quot;),
+                                                .f=calculate_primary_doctor) %&gt;% as.character()
+                     ] %&gt;% 
+  #Filter out any procedures where our doctors fail both criteria. 
+  .[!(primary_doctor %in% c(&quot;BOTH_DOC_FAIL_CRIT&quot;, &quot;TWO_FIT_ALL_SPECS&quot;, &quot;NONE_FIT_SPEC_REQ&quot;))] %&gt;% 
+  .[,primary_doctor_npi := fifelse(primary_doctor==doctor_str1,
+                                   doctor_npi_str1,
+                                   doctor_npi_str2)]</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CASEY RAY OWENS&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MOHAMMAD M ALSOLAIMAN&quot; &quot;DAVID J FRANTZ&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CASEY RAY OWENS&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CASEY RAY OWENS&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## character(0)</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;BRYCE DONALD HASLEM&quot; &quot;BRETT L THORPE&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;THOMAS A DICKINSON&quot; &quot;CHAD BARRETT KAWA&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MARTIN I RADWIN&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## character(0)</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DOUGLAS GRAHAM ADLER&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## character(0)</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CASEY RAY OWENS&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;FAIZ AHMED SHAKIR&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALLEN CLARK GUNNERSON&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALLEN CLARK GUNNERSON&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;KURT O BODILY&quot;  &quot;BRETT L THORPE&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ALAN B ERDMANN&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;BRETT L THORPE&quot;    &quot;CHAD BARRETT KAWA&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;VIKRAM  GARG&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;KURT O BODILY&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAVID J FRANTZ&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;PETER C. O. FENTON&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CHRISTOPHER  CANALE&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ROGER L SIDDOWAY&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CHAD BARRETT KAWA&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MATTHEW EDWARD FEURER&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;ROBERT G. JONES&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;EDWARD J FRECH&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;EDWARD J FRECH&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;PETER C. O. FENTON&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;JEFFREY S POOLE&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DAN A COLLINS&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MELVIN DEN KUWAHARA&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;DARCIE REASONER GORMAN&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;VIKRAM  GARG&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;MATTHEW EDWARD FEURER&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;CHAD BARRETT KAWA&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;BRYCE DONALD HASLEM&quot; &quot;BRETT L THORPE&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>## [1] &quot;multiple meet class req&quot;
+## [1] &quot;BRIEN REX MILLER&quot;</code></pre>
+<pre><code>## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used
+
+## Warning in if (!is.na(class_reqs)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre class="r"><code>cscopy_final_bq &lt;-  cscopy_final_bq[,.(
+primary_doctor,
+primary_doctor_npi,
+most_important_fac  ,
+most_important_fac_npi, 
+procedure_type,
+procedure_modifier,
+tp_med_med,
+tp_med_surg,
+tp_med_medi,
+tp_med_path,
+tp_med_radi,
+tp_med_anes,
+tp_med_faci,
+ingest_date = Sys.Date()
+)]</code></pre>
+<pre class="r"><code>bq_table_upload(x=procedure_table, values= cscopy_final_bq, create_disposition=&#39;CREATE_IF_NEEDED&#39;, write_disposition=&#39;WRITE_APPEND&#39;)</code></pre>
+</div>
+</div>
